@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { rigidBody } from 'crashcat';
 
+const _logoTex = new THREE.TextureLoader().load( 'sprites/gamify-logo.png' );
+_logoTex.colorSpace = THREE.SRGBColorSpace;
+_logoTex.anisotropy = 8;
+const LOGO_ASPECT = 332 / 257;
+
 const _tmpVec = new THREE.Vector3();
 const _forward = new THREE.Vector3();
 const _right = new THREE.Vector3();
@@ -91,6 +96,57 @@ export class Vehicle {
 			}
 
 		} );
+
+		if ( this.bodyNode ) {
+
+			this.container.updateMatrixWorld( true );
+			const bbox = new THREE.Box3().setFromObject( this.bodyNode );
+			const invMat = new THREE.Matrix4().copy( this.bodyNode.matrixWorld ).invert();
+			bbox.applyMatrix4( invMat );
+			const size = bbox.getSize( new THREE.Vector3() );
+			const center = bbox.getCenter( new THREE.Vector3() );
+
+			const logoMat = new THREE.MeshBasicMaterial( {
+				map: _logoTex,
+				transparent: true,
+				depthWrite: false,
+				side: THREE.DoubleSide,
+				polygonOffset: true,
+				polygonOffsetFactor: - 1,
+				polygonOffsetUnits: - 1,
+			} );
+
+			const basis = ( x, y, z ) => {
+				const m = new THREE.Matrix4().makeBasis( x, y, z );
+				return new THREE.Quaternion().setFromRotationMatrix( m );
+			};
+
+			// Door decals on left + right cab sides. Cab is forward portion of body.
+			const doorH = size.y * 0.32;
+			const doorW = doorH * LOGO_ASPECT;
+			const doorZ = center.z + size.z * 0.22;
+			const doorY = center.y - size.y * 0.12;
+			const doorGeo = new THREE.PlaneGeometry( doorW, doorH );
+
+			const leftDoor = new THREE.Mesh( doorGeo, logoMat );
+			leftDoor.quaternion.copy( basis(
+				new THREE.Vector3( 0, 0, 1 ),
+				new THREE.Vector3( 0, 1, 0 ),
+				new THREE.Vector3( - 1, 0, 0 ),
+			) );
+			leftDoor.position.set( bbox.min.x - 0.01, doorY, doorZ );
+			this.bodyNode.add( leftDoor );
+
+			const rightDoor = new THREE.Mesh( doorGeo, logoMat );
+			rightDoor.quaternion.copy( basis(
+				new THREE.Vector3( 0, 0, - 1 ),
+				new THREE.Vector3( 0, 1, 0 ),
+				new THREE.Vector3( 1, 0, 0 ),
+			) );
+			rightDoor.position.set( bbox.max.x + 0.01, doorY, doorZ );
+			this.bodyNode.add( rightDoor );
+
+		}
 
 		return this.container;
 
