@@ -9,11 +9,11 @@ const _dummy = new THREE.Object3D();
 
 export const TRACK_CELLS = [
 	// Top edge
-	[ -3, -6, 'track-corner',   16 ],
+	[ -3, -6, 'track-corner',   16 ], // NW
 	[ -2, -6, 'track-straight', 22 ],
 	[ -1, -6, 'track-straight', 22 ],
-	[  0, -6, 'track-corner',    0 ],
-	// West column (north-south)
+	[  0, -6, 'track-corner',    0 ], // NE
+	// West column (long mountain-pass straight)
 	[ -3, -5, 'track-straight',  0 ],
 	[ -3, -4, 'track-straight',  0 ],
 	[ -3, -3, 'track-straight',  0 ],
@@ -24,22 +24,28 @@ export const TRACK_CELLS = [
 	[ -3,  2, 'track-straight',  0 ],
 	[ -3,  3, 'track-straight',  0 ],
 	[ -3,  4, 'track-straight',  0 ],
-	// East column (north-south, includes finish at z=0)
+	// East column with two S-chicanes that pull the road inward and back
 	[  0, -5, 'track-straight',  0 ],
-	[  0, -4, 'track-straight',  0 ],
-	[  0, -3, 'track-straight',  0 ],
-	[  0, -2, 'track-straight',  0 ],
+	// First chicane (gz -4 to -2): jog west, then back east
+	[  0, -4, 'track-corner',   22 ], // S -> W
+	[ -1, -4, 'track-corner',   16 ], // E -> S
+	[ -1, -3, 'track-straight',  0 ],
+	[ -1, -2, 'track-corner',   10 ], // S -> E
+	[  0, -2, 'track-corner',    0 ], // W -> S
 	[  0, -1, 'track-straight',  0 ],
 	[  0,  0, 'track-finish',    0 ],
 	[  0,  1, 'track-straight',  0 ],
-	[  0,  2, 'track-straight',  0 ],
-	[  0,  3, 'track-straight',  0 ],
-	[  0,  4, 'track-straight',  0 ],
+	// Second chicane (gz 2 to 4)
+	[  0,  2, 'track-corner',   22 ], // S -> W
+	[ -1,  2, 'track-corner',   16 ], // E -> S
+	[ -1,  3, 'track-straight',  0 ],
+	[ -1,  4, 'track-corner',   10 ], // S -> E
+	[  0,  4, 'track-corner',    0 ], // W -> S
 	// Bottom edge
-	[ -3,  5, 'track-corner',   10 ],
+	[ -3,  5, 'track-corner',   10 ], // SW
 	[ -2,  5, 'track-straight', 16 ],
 	[ -1,  5, 'track-straight', 16 ],
-	[  0,  5, 'track-corner',   22 ],
+	[  0,  5, 'track-corner',   22 ], // SE
 ];
 
 // Hand-placed decorations cleared — track was widened/lengthened and the

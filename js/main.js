@@ -25,6 +25,7 @@ import { Headlights } from './Headlights.js';
 import { SpeedLines } from './SpeedLines.js';
 import { Countdown } from './Countdown.js';
 import { Hills } from './Hills.js';
+import { buildProceduralCar } from './ProceduralCar.js';
 
 
 const renderer = new THREE.WebGLRenderer( { antialias: true, outputBufferType: THREE.HalfFloatType } );
@@ -135,6 +136,9 @@ async function loadModels() {
 	);
 
 	await Promise.all( promises );
+
+	// Replace Kenney truck with procedural AE86-style car
+	models[ 'vehicle-truck-yellow' ] = buildProceduralCar();
 
 	const sakura = await buildSakuraTexture();
 	const forest = models[ 'decoration-forest' ];
