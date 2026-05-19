@@ -20,6 +20,7 @@ import { buildBollards } from './Bollards.js';
 import { DriftScore } from './DriftScore.js';
 import { Petals } from './Petals.js';
 import { DayNight } from './DayNight.js';
+import { Stars } from './Stars.js';
 
 
 const renderer = new THREE.WebGLRenderer( { antialias: true, outputBufferType: THREE.HalfFloatType } );
@@ -65,6 +66,7 @@ scene.add( hemiLight );
 const sky = new Sky( scene );
 const petals = new Petals( scene );
 const dayNight = new DayNight( { scene, renderer, dirLight, hemiLight, sky } );
+const stars = new Stars( scene, hemiLight );
 
 
 window.addEventListener( 'resize', () => {
@@ -329,6 +331,7 @@ async function init() {
 		sky.update( dt, cam.camera.position );
 		petals.update( dt, cam.camera.position );
 		dayNight.update( dt );
+		stars.update( dt );
 
 		const hasInput = input.touchActive || Math.abs( input.x ) > 0.05 || Math.abs( input.z ) > 0.05;
 		lapTimer.update( dt, vehicle.spherePos, hasInput );
