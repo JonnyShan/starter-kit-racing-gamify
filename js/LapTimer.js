@@ -51,6 +51,7 @@ export class LapTimer {
 		this.lastLap = null;
 		this.currentLapTime = 0;
 		this.running = false;
+		this.onLapComplete = null;
 
 		this.lineCenter = new THREE.Vector3();
 		this.lineForward = new THREE.Vector3( 0, 0, 1 );
@@ -190,6 +191,8 @@ export class LapTimer {
 			[ { color }, { color }, { color: '#fff' } ],
 			{ duration: 1200, easing: 'ease-out' }
 		);
+
+		if ( this.onLapComplete ) this.onLapComplete( this.lastLap, isBest );
 
 	}
 
