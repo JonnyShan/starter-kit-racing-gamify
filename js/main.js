@@ -6,7 +6,7 @@ import { createWorldSettings, createWorld, addBroadphaseLayer, addObjectLayer, e
 import { Vehicle, MAX_SPEED } from './Vehicle.js';
 import { Camera } from './Camera.js';
 import { Controls } from './Controls.js';
-import { buildTrack, decodeCells, computeSpawnPosition, computeTrackBounds } from './Track.js';
+import { buildTrack, decodeCells, computeSpawnPosition, computeTrackBounds, TRACK_CELLS } from './Track.js';
 import { buildWallColliders, createSphereBody } from './Physics.js';
 import { SmokeTrails } from './Particles.js';
 import { DriftMarks } from './DriftMarks.js';
@@ -195,6 +195,7 @@ async function init() {
 	scene.add( ground );
 
 	buildTrack( scene, models, customCells );
+	buildBollards( scene, customCells || TRACK_CELLS );
 
 	// Probes
 

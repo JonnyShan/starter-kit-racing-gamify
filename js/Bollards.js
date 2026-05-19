@@ -36,6 +36,57 @@ function makeStripeTexture() {
 
 export function buildBollards( scene, cells ) {
 
-	return null;
+	const corners = cells.filter( ( c ) => c[ 2 ] === 'track-corner' );
+	if ( corners.length === 0 ) return null;
+
+	const stripeTex = makeStripeTexture();
+	const material = new THREE.MeshLambertMaterial( { map: stripeTex } );
+	const geometry = new THREE.CylinderGeometry( BOLLARD_RADIUS, BOLLARD_RADIUS, BOLLARD_HEIGHT, 12 );
+
+	const count = corners.length * BOLLARDS_PER_CORNER;
+	const inst = new THREE.InstancedMesh( geometry, material, count );
+	inst.castShadow = true;
+	inst.receiveShadow = false;
+
+	const dummy = new THREE.Object3D();
+	const cellWorld = CELL_RAW * GRID_SCALE;
+	const cellHalfWorld = cellWorld / 2;
+	const outerRadius = ( 2 * ( CELL_RAW / 2 ) - 0.25 ) * GRID_SCALE;
+	const placeRadius = outerRadius - BOLLARD_OFFSET;
+	const trackY = - 0.5 + BOLLARD_HEIGHT / 2 + BOLLARD_BASE_LIFT;
+
+	let idx = 0;
+	for ( const [ gx, gz, _, orient ] of corners ) {
+
+		const cellCenterX = ( gx + 0.5 ) * cellWorld;
+		const cellCenterZ = ( gz + 0.5 ) * cellWorld;
+		const orientDeg = ORIENT_DEG[ orient ] ?? 0;
+		const orientRad = orientDeg * Math.PI / 180;
+
+		const arcLocalX = - cellHalfWorld;
+		const arcLocalZ = + cellHalfWorld;
+		const cos = Math.cos( orientRad );
+		const sin = Math.sin( orientRad );
+		const arcWorldX = cellCenterX + arcLocalX * cos - arcLocalZ * sin;
+		const arcWorldZ = cellCenterZ + arcLocalX * sin + arcLocalZ * cos;
+
+		for ( const ang of BOLLARD_ANGLES_DEG ) {
+
+			const a = ang * Math.PI / 180 + orientRad;
+			const x = arcWorldX + placeRadius * Math.cos( a );
+			const z = arcWorldZ - placeRadius * Math.sin( a );
+			dummy.position.set( x, trackY, z );
+			dummy.rotation.set( 0, 0, 0 );
+			dummy.updateMatrix();
+			inst.setMatrixAt( idx, dummy.matrix );
+			idx += 1;
+
+		}
+
+	}
+
+	inst.instanceMatrix.needsUpdate = true;
+	scene.add( inst );
+	return inst;
 
 }
