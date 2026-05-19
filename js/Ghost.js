@@ -5,9 +5,12 @@ const GHOST_SAMPLE_INTERVAL = 1 / GHOST_SAMPLE_RATE;
 const GHOST_FLOATS_PER_SAMPLE = 7;
 const GHOST_MAX_SECONDS = 300;
 const GHOST_MAX_SAMPLES = GHOST_SAMPLE_RATE * GHOST_MAX_SECONDS;
-const GHOST_COLOR = 0x4a9eff;
 const GHOST_OPACITY = 0.55;
-const STORAGE_PREFIX = 'racing.ghost.';
+const GHOST_TINTS = [ 0xffd84a, 0xc0c8d8, 0xc89060 ]; // gold, silver, bronze
+const MAX_SLOTS = GHOST_TINTS.length;
+const STORAGE_PREFIX = 'racing.ghosts.';
+const LEGACY_PREFIX = 'racing.ghost.';
+const LEGACY_BEST_PREFIX = 'racing.bestLap.';
 
 const _qa = new THREE.Quaternion();
 const _qb = new THREE.Quaternion();
@@ -36,16 +39,17 @@ export class Ghost {
 	constructor( scene, trackId, vehicleModel, lapTimer ) {
 
 		this.scene = scene;
-		this.storageKey = STORAGE_PREFIX + ( trackId || 'default' );
+		this.trackIdRaw = trackId || 'default';
+		this.storageKey = STORAGE_PREFIX + this.trackIdRaw;
 		this.lapTimer = lapTimer;
 
 		this.recordBuffer = new Float32Array( GHOST_MAX_SAMPLES * GHOST_FLOATS_PER_SAMPLE );
 		this.recordCount = 0;
 		this._recordAccum = 0;
 
-		this.ghostBuffer = null;
-		this.mesh = this._buildGhostMesh( vehicleModel );
-		scene.add( this.mesh );
+		this.slots = [];
+		this.meshes = GHOST_TINTS.map( ( tint ) => this._buildGhostMesh( vehicleModel, tint ) );
+		this.meshes.forEach( ( m ) => scene.add( m ) );
 
 		this._load();
 
@@ -53,29 +57,12 @@ export class Ghost {
 
 	}
 
-	_onLapComplete( time, isBest ) {
-
-		if ( isBest && time <= GHOST_MAX_SECONDS && this.recordCount > 0 ) {
-
-			this.ghostBuffer = this.recordBuffer.slice(
-				0,
-				this.recordCount * GHOST_FLOATS_PER_SAMPLE,
-			);
-			this._save();
-
-		}
-
-		this.recordCount = 0;
-		this._recordAccum = 0;
-
-	}
-
-	_buildGhostMesh( vehicleModel ) {
+	_buildGhostMesh( vehicleModel, tint ) {
 
 		const mesh = vehicleModel.clone( true );
 
 		const material = new THREE.MeshBasicMaterial( {
-			color: GHOST_COLOR,
+			color: tint,
 			transparent: true,
 			opacity: GHOST_OPACITY,
 			depthWrite: false,
@@ -100,9 +87,14 @@ export class Ghost {
 
 	_save() {
 
-		if ( ! this.ghostBuffer ) return;
 		try {
-			localStorage.setItem( this.storageKey, bufferToBase64( this.ghostBuffer ) );
+			const payload = {
+				slots: this.slots.map( ( s ) => ( {
+					time: s.time,
+					data: bufferToBase64( s.buffer ),
+				} ) ),
+			};
+			localStorage.setItem( this.storageKey, JSON.stringify( payload ) );
 		} catch {}
 
 	}
@@ -110,12 +102,75 @@ export class Ghost {
 	_load() {
 
 		try {
-			const str = localStorage.getItem( this.storageKey );
-			if ( ! str ) return;
-			const buf = base64ToBuffer( str );
-			if ( buf.length === 0 || buf.length % GHOST_FLOATS_PER_SAMPLE !== 0 ) return;
-			this.ghostBuffer = buf;
+			const raw = localStorage.getItem( this.storageKey );
+			if ( raw ) {
+				const payload = JSON.parse( raw );
+				if ( payload && Array.isArray( payload.slots ) ) {
+					this.slots = payload.slots
+						.map( ( s ) => ( { time: Number( s.time ), buffer: base64ToBuffer( s.data ) } ) )
+						.filter( ( s ) => Number.isFinite( s.time ) && s.buffer.length > 0 && s.buffer.length % GHOST_FLOATS_PER_SAMPLE === 0 )
+						.sort( ( a, b ) => a.time - b.time )
+						.slice( 0, MAX_SLOTS );
+					return;
+				}
+			}
 		} catch {}
+
+		this._migrateLegacy();
+
+	}
+
+	_migrateLegacy() {
+
+		try {
+			const legacyKey = LEGACY_PREFIX + this.trackIdRaw;
+			const legacyBestKey = LEGACY_BEST_PREFIX + this.trackIdRaw;
+			const raw = localStorage.getItem( legacyKey );
+			if ( ! raw ) return;
+			const buf = base64ToBuffer( raw );
+			if ( buf.length === 0 || buf.length % GHOST_FLOATS_PER_SAMPLE !== 0 ) return;
+			const bestRaw = localStorage.getItem( legacyBestKey );
+			const time = bestRaw !== null ? Number( bestRaw ) : 60;
+			this.slots = [ { time: Number.isFinite( time ) ? time : 60, buffer: buf } ];
+			this._save();
+			localStorage.removeItem( legacyKey );
+		} catch {}
+
+	}
+
+	_onLapComplete( time, isBest ) {
+
+		if ( time > GHOST_MAX_SECONDS || this.recordCount === 0 ) {
+
+			this.recordCount = 0;
+			this._recordAccum = 0;
+			return;
+
+		}
+
+		let insertAt = this.slots.length;
+		for ( let i = 0; i < this.slots.length; i ++ ) {
+
+			if ( time < this.slots[ i ].time ) {
+
+				insertAt = i;
+				break;
+
+			}
+
+		}
+
+		if ( insertAt < MAX_SLOTS ) {
+
+			const buffer = this.recordBuffer.slice( 0, this.recordCount * GHOST_FLOATS_PER_SAMPLE );
+			this.slots.splice( insertAt, 0, { time, buffer } );
+			if ( this.slots.length > MAX_SLOTS ) this.slots.length = MAX_SLOTS;
+			this._save();
+
+		}
+
+		this.recordCount = 0;
+		this._recordAccum = 0;
 
 	}
 
@@ -143,9 +198,20 @@ export class Ghost {
 
 		}
 
-		if ( this.ghostBuffer && this.lapTimer.running ) {
+		for ( let i = 0; i < MAX_SLOTS; i ++ ) {
 
-			const totalSamples = this.ghostBuffer.length / GHOST_FLOATS_PER_SAMPLE;
+			const slot = this.slots[ i ];
+			const mesh = this.meshes[ i ];
+
+			if ( ! slot || ! this.lapTimer.running ) {
+
+				mesh.visible = false;
+				continue;
+
+			}
+
+			const buf = slot.buffer;
+			const totalSamples = buf.length / GHOST_FLOATS_PER_SAMPLE;
 			const idxFloat = lapTime * GHOST_SAMPLE_RATE;
 			const i0 = Math.min( Math.floor( idxFloat ), totalSamples - 1 );
 			const i1 = Math.min( i0 + 1, totalSamples - 1 );
@@ -153,24 +219,19 @@ export class Ghost {
 
 			const o0 = i0 * GHOST_FLOATS_PER_SAMPLE;
 			const o1 = i1 * GHOST_FLOATS_PER_SAMPLE;
-			const b = this.ghostBuffer;
 
-			this.mesh.position.set(
-				b[ o0     ] + ( b[ o1     ] - b[ o0     ] ) * t,
-				b[ o0 + 1 ] + ( b[ o1 + 1 ] - b[ o0 + 1 ] ) * t,
-				b[ o0 + 2 ] + ( b[ o1 + 2 ] - b[ o0 + 2 ] ) * t,
+			mesh.position.set(
+				buf[ o0     ] + ( buf[ o1     ] - buf[ o0     ] ) * t,
+				buf[ o0 + 1 ] + ( buf[ o1 + 1 ] - buf[ o0 + 1 ] ) * t,
+				buf[ o0 + 2 ] + ( buf[ o1 + 2 ] - buf[ o0 + 2 ] ) * t,
 			);
 
-			_qa.set( b[ o0 + 3 ], b[ o0 + 4 ], b[ o0 + 5 ], b[ o0 + 6 ] );
-			_qb.set( b[ o1 + 3 ], b[ o1 + 4 ], b[ o1 + 5 ], b[ o1 + 6 ] );
+			_qa.set( buf[ o0 + 3 ], buf[ o0 + 4 ], buf[ o0 + 5 ], buf[ o0 + 6 ] );
+			_qb.set( buf[ o1 + 3 ], buf[ o1 + 4 ], buf[ o1 + 5 ], buf[ o1 + 6 ] );
 			_qr.copy( _qa ).slerp( _qb, t );
-			this.mesh.quaternion.copy( _qr );
+			mesh.quaternion.copy( _qr );
 
-			this.mesh.visible = true;
-
-		} else {
-
-			this.mesh.visible = false;
+			mesh.visible = true;
 
 		}
 
@@ -178,17 +239,17 @@ export class Ghost {
 
 	dispose() {
 
-		if ( this.mesh ) {
+		for ( const mesh of this.meshes ) {
 
-			this.scene.remove( this.mesh );
-			this.mesh.traverse( ( child ) => {
+			this.scene.remove( mesh );
+			mesh.traverse( ( child ) => {
 
 				if ( child.isMesh ) child.material.dispose();
 
 			} );
-			this.mesh = null;
 
 		}
+		this.meshes = [];
 
 		if ( this.lapTimer ) this.lapTimer.onLapComplete = null;
 
