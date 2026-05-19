@@ -169,6 +169,8 @@ export class Vehicle {
 
 		this.inputX = controlsInput.x;
 		this.inputZ = controlsInput.z;
+		this.prevHandbrake = this.handbrake;
+		this.handbrake = !! controlsInput.handbrake;
 
 		if ( controlsInput.touchActive && ( this.inputX !== 0 || this.inputZ !== 0 ) ) {
 
