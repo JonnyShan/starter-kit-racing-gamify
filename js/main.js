@@ -164,6 +164,15 @@ async function init() {
 	scene.fog.near = groundSize * 0.6;
 	scene.fog.far = groundSize * 1.5;
 
+	const GROUND_COLOR = 0x6fa84a;
+	const groundGeo = new THREE.PlaneGeometry( groundSize * 4, groundSize * 4 );
+	const groundMat = new THREE.MeshLambertMaterial( { color: GROUND_COLOR } );
+	const ground = new THREE.Mesh( groundGeo, groundMat );
+	ground.rotation.x = - Math.PI / 2;
+	ground.position.set( bounds.centerX, - 0.15, bounds.centerZ );
+	ground.receiveShadow = true;
+	scene.add( ground );
+
 	buildTrack( scene, models, customCells );
 
 	// Probes
