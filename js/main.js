@@ -22,6 +22,7 @@ import { Petals } from './Petals.js';
 import { DayNight } from './DayNight.js';
 import { Stars } from './Stars.js';
 import { Headlights } from './Headlights.js';
+import { SpeedLines } from './SpeedLines.js';
 
 
 const renderer = new THREE.WebGLRenderer( { antialias: true, outputBufferType: THREE.HalfFloatType } );
@@ -268,6 +269,7 @@ async function init() {
 	scene.add( vehicleGroup );
 
 	const headlights = new Headlights( scene, vehicle, hemiLight );
+	const speedLines = new SpeedLines( vehicle );
 
 	dirLight.target = vehicleGroup;
 
@@ -336,6 +338,7 @@ async function init() {
 		dayNight.update( dt );
 		stars.update( dt );
 		headlights.update( dt );
+		speedLines.update( dt );
 
 		const hasInput = input.touchActive || Math.abs( input.x ) > 0.05 || Math.abs( input.z ) > 0.05;
 		lapTimer.update( dt, vehicle.spherePos, hasInput );
