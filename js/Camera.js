@@ -4,10 +4,10 @@ const TRAIL_DISTANCE = 7.0;
 const TRAIL_HEIGHT = 3.0;
 const LOOK_AHEAD = 5.0;
 const LOOK_HEIGHT = 1.0;
-const POSITION_LERP = 4.0;
-const LOOK_LERP = 6.0;
+const POSITION_LERP = 20.0;
+const LOOK_LERP = 30.0;
 const SPEED_REF = 15;
-const LOOK_SPEED_BONUS = 4;
+const LOOK_SPEED_BONUS = 0;
 const RESPAWN_SNAP_DISTANCE = 5.0;
 
 const _forward = new THREE.Vector3();
