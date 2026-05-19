@@ -33,8 +33,9 @@ renderer.setEffects( [ bloomPass ] );
 document.body.appendChild( renderer.domElement );
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color( 0xadb2ba );
-scene.fog = new THREE.Fog( 0xadb2ba, 30, 55 );
+const FOG_COLOR = 0xc8e2ff;
+scene.background = new THREE.Color( FOG_COLOR );
+scene.fog = new THREE.Fog( FOG_COLOR, 30, 55 );
 
 const dirLight = new THREE.DirectionalLight( 0xffffff, 3 );
 dirLight.position.set( 11.4, 15, -5.3 );
@@ -154,8 +155,8 @@ async function init() {
 	dirLight.shadow.camera.bottom = - shadowExtent;
 	dirLight.shadow.camera.updateProjectionMatrix();
 
-	scene.fog.near = groundSize * 0.4;
-	scene.fog.far = groundSize * 0.8;
+	scene.fog.near = groundSize * 0.6;
+	scene.fog.far = groundSize * 1.5;
 
 	buildTrack( scene, models, customCells );
 
