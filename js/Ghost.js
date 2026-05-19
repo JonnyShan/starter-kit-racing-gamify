@@ -177,6 +177,21 @@ export class Ghost {
 	}
 
 	dispose() {
+
+		if ( this.mesh ) {
+
+			this.scene.remove( this.mesh );
+			this.mesh.traverse( ( child ) => {
+
+				if ( child.isMesh ) child.material.dispose();
+
+			} );
+			this.mesh = null;
+
+		}
+
+		if ( this.lapTimer ) this.lapTimer.onLapComplete = null;
+
 	}
 
 }
