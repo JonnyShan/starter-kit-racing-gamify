@@ -5,6 +5,7 @@ export class Controls {
 		this.keys = {};
 		this.x = 0;
 		this.z = 0;
+		this.handbrake = false;
 
 		// Touch state
 		this.touchActive = false;
@@ -14,7 +15,10 @@ export class Controls {
 		this.steerStartX = 0;
 		this.steerStartY = 0;
 
-		window.addEventListener( 'keydown', ( e ) => this.keys[ e.code ] = true );
+		window.addEventListener( 'keydown', ( e ) => {
+			this.keys[ e.code ] = true;
+			if ( e.code === 'Space' ) e.preventDefault();
+		} );
 		window.addEventListener( 'keyup', ( e ) => this.keys[ e.code ] = false );
 
 		this.setupTouchUI();
@@ -108,6 +112,7 @@ export class Controls {
 	update() {
 
 		let x = 0, z = 0;
+		let handbrake = false;
 
 		// Keyboard
 
@@ -115,6 +120,7 @@ export class Controls {
 		if ( this.keys[ 'KeyD' ] || this.keys[ 'ArrowRight' ] ) x += 1;
 		if ( this.keys[ 'KeyW' ] || this.keys[ 'ArrowUp' ] ) z += 1;
 		if ( this.keys[ 'KeyS' ] || this.keys[ 'ArrowDown' ] ) z -= 1;
+		if ( this.keys[ 'Space' ] ) handbrake = true;
 
 		// Gamepad
 
@@ -131,6 +137,8 @@ export class Controls {
 			const lt = gp.buttons[ 6 ] ? gp.buttons[ 6 ].value : 0;
 
 			if ( rt > 0.1 || lt > 0.1 ) z = rt - lt;
+
+			if ( gp.buttons[ 0 ] && gp.buttons[ 0 ].pressed ) handbrake = true;
 
 			break;
 
@@ -155,8 +163,9 @@ export class Controls {
 
 		this.x = x;
 		this.z = z;
+		this.handbrake = handbrake;
 
-		return { x, z, touchActive: this.touchActive };
+		return { x, z, handbrake, touchActive: this.touchActive };
 
 	}
 
