@@ -143,6 +143,37 @@ export class Ghost {
 
 		}
 
+		if ( this.ghostBuffer && this.lapTimer.running ) {
+
+			const totalSamples = this.ghostBuffer.length / GHOST_FLOATS_PER_SAMPLE;
+			const idxFloat = lapTime * GHOST_SAMPLE_RATE;
+			const i0 = Math.min( Math.floor( idxFloat ), totalSamples - 1 );
+			const i1 = Math.min( i0 + 1, totalSamples - 1 );
+			const t = i0 === i1 ? 0 : idxFloat - i0;
+
+			const o0 = i0 * GHOST_FLOATS_PER_SAMPLE;
+			const o1 = i1 * GHOST_FLOATS_PER_SAMPLE;
+			const b = this.ghostBuffer;
+
+			this.mesh.position.set(
+				b[ o0     ] + ( b[ o1     ] - b[ o0     ] ) * t,
+				b[ o0 + 1 ] + ( b[ o1 + 1 ] - b[ o0 + 1 ] ) * t,
+				b[ o0 + 2 ] + ( b[ o1 + 2 ] - b[ o0 + 2 ] ) * t,
+			);
+
+			_qa.set( b[ o0 + 3 ], b[ o0 + 4 ], b[ o0 + 5 ], b[ o0 + 6 ] );
+			_qb.set( b[ o1 + 3 ], b[ o1 + 4 ], b[ o1 + 5 ], b[ o1 + 6 ] );
+			_qr.copy( _qa ).slerp( _qb, t );
+			this.mesh.quaternion.copy( _qr );
+
+			this.mesh.visible = true;
+
+		} else {
+
+			this.mesh.visible = false;
+
+		}
+
 	}
 
 	dispose() {
