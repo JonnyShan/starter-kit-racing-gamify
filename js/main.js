@@ -26,6 +26,7 @@ import { SpeedLines } from './SpeedLines.js';
 import { Countdown } from './Countdown.js';
 import { Hills } from './Hills.js';
 import { buildProceduralCar } from './ProceduralCar.js';
+import { GrassBlades } from './GrassBlades.js';
 
 
 const renderer = new THREE.WebGLRenderer( { antialias: true, outputBufferType: THREE.HalfFloatType } );
@@ -210,6 +211,7 @@ async function init() {
 	scene.add( ground );
 
 	new Hills( scene, bounds );
+	new GrassBlades( scene, bounds, customCells || TRACK_CELLS );
 
 	buildTrack( scene, models, customCells );
 	buildBollards( scene, customCells || TRACK_CELLS );

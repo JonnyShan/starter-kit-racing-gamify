@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 
-const TRAIL_DISTANCE = 7.0;
-const TRAIL_HEIGHT = 3.0;
+const TRAIL_DISTANCE = 8.5;
+const TRAIL_HEIGHT = 5.0;
 const LOOK_AHEAD = 5.0;
-const LOOK_HEIGHT = 1.0;
+const LOOK_HEIGHT = 1.5;
 const POSITION_LERP = 20.0;
 const LOOK_LERP = 30.0;
 const SPEED_REF = 15;
