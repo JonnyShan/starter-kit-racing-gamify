@@ -20,9 +20,10 @@ export class Sky {
 
 		this.scene = scene;
 		this.skydome = this._buildSkydome();
-		this.cloudGroup = null;
+		this.cloudGroup = this._buildCloudField();
 
 		scene.add( this.skydome );
+		scene.add( this.cloudGroup );
 
 	}
 
@@ -100,6 +101,39 @@ export class Sky {
 		tex.colorSpace = THREE.SRGBColorSpace;
 		tex.anisotropy = 4;
 		return tex;
+
+	}
+
+	_buildCloudField() {
+
+		const texture = this._makeCloudTexture();
+		const material = new THREE.SpriteMaterial( {
+			map: texture,
+			color: CLOUD_TINT,
+			transparent: true,
+			depthWrite: false,
+			fog: false,
+		} );
+
+		const group = new THREE.Group();
+
+		for ( let i = 0; i < CLOUD_COUNT; i ++ ) {
+
+			const sprite = new THREE.Sprite( material );
+			const angle = ( i / CLOUD_COUNT ) * Math.PI * 2 + Math.random() * 0.4;
+			const radius = CLOUD_RING_RADIUS * ( 0.7 + Math.random() * 0.6 );
+			sprite.position.set(
+				Math.cos( angle ) * radius,
+				CLOUD_HEIGHT_MIN + Math.random() * ( CLOUD_HEIGHT_MAX - CLOUD_HEIGHT_MIN ),
+				Math.sin( angle ) * radius,
+			);
+			const size = CLOUD_SIZE_MIN + Math.random() * ( CLOUD_SIZE_MAX - CLOUD_SIZE_MIN );
+			sprite.scale.set( size, size * 0.5, 1 );
+			group.add( sprite );
+
+		}
+
+		return group;
 
 	}
 
