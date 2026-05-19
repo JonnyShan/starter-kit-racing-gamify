@@ -10,6 +10,21 @@ const STATE_IDLE = 0;
 const STATE_DRIFTING = 1;
 const STATE_GRACE = 2;
 
+const GRADES = [
+	{ score: 5000, letter: 'S', color: '#ff6ec7' },
+	{ score: 2500, letter: 'A', color: '#ffd84a' },
+	{ score: 1000, letter: 'B', color: '#67e0ff' },
+	{ score: 500,  letter: 'C', color: '#a3ff8b' },
+	{ score: 0,    letter: 'D', color: '#cccccc' },
+];
+
+function gradeFor( score ) {
+
+	for ( const g of GRADES ) if ( score >= g.score ) return g;
+	return GRADES[ GRADES.length - 1 ];
+
+}
+
 export class DriftScore {
 
 	constructor( trackId ) {
@@ -67,15 +82,26 @@ export class DriftScore {
 				top: 50%;
 				left: 50%;
 				transform: translate(-50%, -50%);
-				color: #ffd84a;
-				font: 800 56px/1 -apple-system, BlinkMacSystemFont, sans-serif;
-				font-variant-numeric: tabular-nums;
-				text-shadow: 0 0 16px rgba(255,216,74,0.7), 0 4px 12px rgba(0,0,0,0.7);
+				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+				text-align: center;
 				pointer-events: none;
 				z-index: 11;
 				opacity: 0;
 				transition: opacity 0.3s, transform 0.3s;
 				user-select: none;
+			}
+			#drift-banner .letter {
+				font: 900 96px/1 -apple-system, BlinkMacSystemFont, sans-serif;
+				text-shadow: 0 0 24px currentColor, 0 4px 16px rgba(0,0,0,0.7);
+				letter-spacing: -0.02em;
+			}
+			#drift-banner .points {
+				font: 700 24px/1 -apple-system, BlinkMacSystemFont, sans-serif;
+				font-variant-numeric: tabular-nums;
+				color: #fff;
+				text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+				margin-top: 4px;
+				letter-spacing: 0.08em;
 			}
 			#drift-banner.show { opacity: 1; transform: translate(-50%, -60%); }
 		`;
@@ -201,7 +227,11 @@ export class DriftScore {
 
 	_showBanner( score ) {
 
-		this.bannerEl.textContent = `${ Math.floor( score ) } POINTS!`;
+		const grade = gradeFor( score );
+
+		this.bannerEl.innerHTML =
+			`<div class="letter" style="color: ${ grade.color }">${ grade.letter }</div>` +
+			`<div class="points">${ Math.floor( score ) } POINTS</div>`;
 		this.bannerEl.classList.add( 'show' );
 		this.bannerTimer = BANNER_DURATION_SECONDS;
 
