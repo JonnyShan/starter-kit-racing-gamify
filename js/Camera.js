@@ -1,54 +1,31 @@
 import * as THREE from 'three';
 
-const _desired = new THREE.Vector3();
-const _delta = new THREE.Vector3();
-const _lookPoint = new THREE.Vector3();
+const TRAIL_DISTANCE = 7.0;
+const TRAIL_HEIGHT = 3.0;
+const LOOK_AHEAD = 5.0;
+const LOOK_HEIGHT = 1.0;
+const POSITION_LERP = 4.0;
+const LOOK_LERP = 6.0;
+const SPEED_REF = 15;
+const LOOK_SPEED_BONUS = 4;
+const RESPAWN_SNAP_DISTANCE = 5.0;
+
+const _forward = new THREE.Vector3();
+const _desiredPos = new THREE.Vector3();
+const _desiredLook = new THREE.Vector3();
+const _prevPos = new THREE.Vector3();
 
 export class Camera {
 
 	constructor() {
 
 		this.camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 0.1, 60 );
-
-		// Matches Godot View: 45° azimuth, 35° elevation, distance 16
-		this.offset = new THREE.Vector3( 9.27, 9.18, 9.27 );
-
-		this.camera.position.copy( this.offset );
-		this.camera.lookAt( 0, 0, 0 );
-
-		// Camera-aligned ground basis (XZ plane), derived from offset.
-		// camRightXZ: screen-right projected to ground.
-		// camForwardXZ: screen-up (away from camera) projected to ground.
-		this.camRightXZ = new THREE.Vector3( this.offset.z, 0, - this.offset.x ).normalize();
-		this.camForwardXZ = new THREE.Vector3( - this.offset.x, 0, - this.offset.z ).normalize();
-
-		this.leadFactor = 3.0;
-		this.cameraSmoothing = 2.0;
-		this.deadzoneRadius = 5.0;
-		this.screenShiftUp = 1.0;
-
-		this.smoothedDesired = new THREE.Vector3();
+		this.smoothedLook = new THREE.Vector3();
 		this.initialized = false;
 
 		this._shakeMagnitude = 0;
 		this._shakeRemaining = 0;
 		this._shakeDuration = 0;
-
-		const segments = 64;
-		const points = [];
-		for ( let i = 0; i <= segments; i ++ ) {
-
-			const a = ( i / segments ) * Math.PI * 2;
-			points.push( new THREE.Vector3( Math.cos( a ), 0, Math.sin( a ) ) );
-
-		}
-		const dzGeom = new THREE.BufferGeometry().setFromPoints( points );
-		this.debug = new THREE.Line( dzGeom, new THREE.LineBasicMaterial( { color: 0xff00ff, depthTest: false } ) );
-		this.debug.visible = false;
-		this.debug.renderOrder = 999;
-		this.debug.quaternion.setFromRotationMatrix(
-			new THREE.Matrix4().makeBasis( this.camRightXZ, new THREE.Vector3( 0, 1, 0 ), this.camForwardXZ )
-		);
 
 		window.addEventListener( 'resize', () => {
 
@@ -59,52 +36,56 @@ export class Camera {
 
 	}
 
-	update( dt, target, velocity ) {
+	update( dt, vehicle ) {
 
-		const radius = this.deadzoneRadius;
-		const radiusSq = radius * radius;
+		const carPos = vehicle.container.position;
 
-		// Lead = velocity projected onto camera-aligned ground basis, scaled, clamped to the deadzone disk.
-		// Becomes the camera's offset from the car: car settles at the trailing edge of the circle.
-		let leadX = velocity.dot( this.camRightXZ ) * this.leadFactor;
-		let leadY = velocity.dot( this.camForwardXZ ) * this.leadFactor;
-		const leadLenSq = leadX * leadX + leadY * leadY;
-		if ( leadLenSq > radiusSq ) {
+		_forward.set( 0, 0, 1 ).applyQuaternion( vehicle.container.quaternion );
+		_forward.y = 0;
+		const len = _forward.length();
+		if ( len > 0.001 ) _forward.multiplyScalar( 1 / len );
+		else _forward.set( 0, 0, 1 );
 
-			const k = radius / Math.sqrt( leadLenSq );
-			leadX *= k;
-			leadY *= k;
+		const speed = vehicle.modelVelocity ? vehicle.modelVelocity.length() : 0;
+		const speedFactor = Math.min( speed / SPEED_REF, 1 );
+
+		_desiredPos.copy( carPos )
+			.addScaledVector( _forward, - TRAIL_DISTANCE );
+		_desiredPos.y += TRAIL_HEIGHT;
+
+		_desiredLook.copy( carPos )
+			.addScaledVector( _forward, LOOK_AHEAD + speedFactor * LOOK_SPEED_BONUS );
+		_desiredLook.y += LOOK_HEIGHT;
+
+		if ( ! this.initialized ) {
+
+			this.camera.position.copy( _desiredPos );
+			this.smoothedLook.copy( _desiredLook );
+			this.initialized = true;
+
+		} else {
+
+			// Detect respawn-style teleport: car position jumped a lot; snap.
+			if ( _prevPos.distanceTo( carPos ) > RESPAWN_SNAP_DISTANCE ) {
+
+				this.camera.position.copy( _desiredPos );
+				this.smoothedLook.copy( _desiredLook );
+
+			} else {
+
+				const posAlpha = 1 - Math.exp( - dt * POSITION_LERP );
+				this.camera.position.lerp( _desiredPos, posAlpha );
+
+				const lookAlpha = 1 - Math.exp( - dt * LOOK_LERP );
+				this.smoothedLook.lerp( _desiredLook, lookAlpha );
+
+			}
 
 		}
 
-		_desired.copy( target )
-			.addScaledVector( this.camRightXZ, leadX )
-			.addScaledVector( this.camForwardXZ, leadY );
+		_prevPos.copy( carPos );
 
-		const alpha = this.initialized ? 1 - Math.exp( - dt * this.cameraSmoothing ) : 1;
-		this.smoothedDesired.lerp( _desired, alpha );
-		this.initialized = true;
-
-		// Hard-clamp: car must not escape the deadzone, even if the lerp lags at high speed.
-		_delta.subVectors( target, this.smoothedDesired );
-		const offsetX = _delta.dot( this.camRightXZ );
-		const offsetY = _delta.dot( this.camForwardXZ );
-		const offsetLenSq = offsetX * offsetX + offsetY * offsetY;
-		if ( offsetLenSq > radiusSq ) {
-
-			const offsetLen = Math.sqrt( offsetLenSq );
-			const k = ( offsetLen - radius ) / offsetLen;
-			this.smoothedDesired
-				.addScaledVector( this.camRightXZ, offsetX * k )
-				.addScaledVector( this.camForwardXZ, offsetY * k );
-
-		}
-
-		// Shift the entire view (camera + lookAt) so smoothedDesired sits higher on screen.
-		_lookPoint.copy( this.smoothedDesired ).addScaledVector( this.camForwardXZ, - this.screenShiftUp );
-
-		this.camera.position.copy( _lookPoint ).add( this.offset );
-		this.camera.lookAt( _lookPoint );
+		this.camera.lookAt( this.smoothedLook );
 
 		if ( this._shakeRemaining > 0 ) {
 
@@ -116,10 +97,6 @@ export class Camera {
 			this._shakeRemaining = Math.max( 0, this._shakeRemaining - dt );
 
 		}
-
-		this.debug.position.copy( this.smoothedDesired );
-		this.debug.position.y += 0.05;
-		this.debug.scale.set( radius, 1, radius );
 
 	}
 

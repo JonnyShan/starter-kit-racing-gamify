@@ -276,7 +276,6 @@ async function init() {
 	dirLight.target = vehicleGroup;
 
 	const cam = new Camera();
-	scene.add( cam.debug );
 
 	const controls = new Controls();
 
@@ -291,7 +290,6 @@ async function init() {
 	const driftScore = new DriftScore( mapParam, cam );
 
 	const _forward = new THREE.Vector3();
-	const _camLead = new THREE.Vector3();
 
 	const contactListener = {
 		onContactAdded( bodyA, bodyB ) {
@@ -329,9 +327,7 @@ async function init() {
 			vehicle.spherePos.z - 5.3
 		);
 
-		const mv = vehicle.modelVelocity;
-		_camLead.set( 0, 0, 1 ).applyQuaternion( vehicle.container.quaternion ).multiplyScalar( Math.sqrt( mv.x * mv.x + mv.z * mv.z ) );
-		cam.update( dt, vehicle.spherePos, _camLead );
+		cam.update( dt, vehicle );
 		particles.update( dt, vehicle );
 		driftMarks.update( dt, vehicle );
 		audio.update( dt, vehicle.linearSpeed / MAX_SPEED, input.z, vehicle.driftIntensity );
