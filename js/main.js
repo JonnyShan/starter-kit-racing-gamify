@@ -37,7 +37,13 @@ const FOG_COLOR = 0xc8e2ff;
 scene.background = new THREE.Color( FOG_COLOR );
 scene.fog = new THREE.Fog( FOG_COLOR, 30, 55 );
 
-const dirLight = new THREE.DirectionalLight( 0xffffff, 3 );
+const SUN_COLOR = 0xfff2d6;
+const SUN_INTENSITY = 4;
+const SKY_AMBIENT = 0xa3d4ff;
+const GROUND_AMBIENT = 0x6fa84a;
+const AMBIENT_INTENSITY = 1.8;
+
+const dirLight = new THREE.DirectionalLight( SUN_COLOR, SUN_INTENSITY );
 dirLight.position.set( 11.4, 15, -5.3 );
 dirLight.castShadow = true;
 dirLight.shadow.mapSize.setScalar( 4096 );
@@ -46,8 +52,8 @@ dirLight.shadow.camera.far = 60;
 dirLight.shadow.radius = 4;
 scene.add( dirLight );
 
-const hemiLight = new THREE.HemisphereLight( 0xc8d8e8, 0x7a8a5a, 2 );
-hemiLight.position.copy( dirLight.position )
+const hemiLight = new THREE.HemisphereLight( SKY_AMBIENT, GROUND_AMBIENT, AMBIENT_INTENSITY );
+hemiLight.position.copy( dirLight.position );
 scene.add( hemiLight );
 
 const sky = new Sky( scene );
