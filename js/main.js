@@ -46,6 +46,8 @@ renderer.setEffects( [ bloomPass ] );
 document.body.appendChild( renderer.domElement );
 
 const scene = new THREE.Scene();
+window.__scene = scene;
+window.__renderer = renderer;
 const FOG_COLOR = 0xc8e2ff;
 scene.background = new THREE.Color( FOG_COLOR );
 scene.fog = new THREE.Fog( FOG_COLOR, 30, 55 );
