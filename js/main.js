@@ -23,6 +23,7 @@ import { DayNight } from './DayNight.js';
 import { Stars } from './Stars.js';
 import { Headlights } from './Headlights.js';
 import { SpeedLines } from './SpeedLines.js';
+import { Countdown } from './Countdown.js';
 
 
 const renderer = new THREE.WebGLRenderer( { antialias: true, outputBufferType: THREE.HalfFloatType } );
@@ -270,6 +271,7 @@ async function init() {
 
 	const headlights = new Headlights( scene, vehicle, hemiLight );
 	const speedLines = new SpeedLines( vehicle );
+	const countdown = new Countdown();
 
 	dirLight.target = vehicleGroup;
 
@@ -339,6 +341,7 @@ async function init() {
 		stars.update( dt );
 		headlights.update( dt );
 		speedLines.update( dt );
+		countdown.update( dt );
 
 		const hasInput = input.touchActive || Math.abs( input.x ) > 0.05 || Math.abs( input.z ) > 0.05;
 		lapTimer.update( dt, vehicle.spherePos, hasInput );
