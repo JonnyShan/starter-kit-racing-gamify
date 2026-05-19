@@ -17,6 +17,7 @@ import { Sky } from './Sky.js';
 import { Ghost } from './Ghost.js';
 import { buildSakuraTexture } from './SakuraTexture.js';
 import { buildBollards } from './Bollards.js';
+import { DriftScore } from './DriftScore.js';
 
 
 const renderer = new THREE.WebGLRenderer( { antialias: true, outputBufferType: THREE.HalfFloatType } );
