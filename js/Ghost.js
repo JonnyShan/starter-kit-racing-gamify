@@ -26,7 +26,36 @@ export class Ghost {
 		this._recordAccum = 0;
 
 		this.ghostBuffer = null;
-		this.mesh = null;
+		this.mesh = this._buildGhostMesh( vehicleModel );
+		scene.add( this.mesh );
+
+	}
+
+	_buildGhostMesh( vehicleModel ) {
+
+		const mesh = vehicleModel.clone( true );
+
+		const material = new THREE.MeshBasicMaterial( {
+			color: GHOST_COLOR,
+			transparent: true,
+			opacity: GHOST_OPACITY,
+			depthWrite: false,
+		} );
+
+		mesh.traverse( ( child ) => {
+
+			if ( child.isMesh ) {
+
+				child.material = material;
+				child.castShadow = false;
+				child.receiveShadow = false;
+
+			}
+
+		} );
+
+		mesh.visible = false;
+		return mesh;
 
 	}
 
