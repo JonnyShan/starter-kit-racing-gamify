@@ -9,6 +9,8 @@ const DONUT_TOAST_SECONDS = 1.2;
 const LATERAL_REVERSE_THRESHOLD = 0.2;
 const SCURVE_MIN_FLIPS = 2;
 const SCURVE_TOAST_SECONDS = 1.2;
+const SHAKE_MAGNITUDE = 0.6;
+const SHAKE_DURATION = 0.4;
 const STORAGE_PREFIX = 'racing.driftScore.';
 
 const STATE_IDLE = 0;
@@ -32,9 +34,10 @@ function gradeFor( score ) {
 
 export class DriftScore {
 
-	constructor( trackId ) {
+	constructor( trackId, cam ) {
 
 		this.storageKey = STORAGE_PREFIX + ( trackId || 'default' );
+		this.cam = cam || null;
 
 		this.state = STATE_IDLE;
 		this.liveScore = 0;
@@ -192,6 +195,7 @@ export class DriftScore {
 		const speedDropped = this.prevSpeed > 0.3 && speed < this.prevSpeed * CRASH_SPEED_DROP_RATIO;
 		if ( speedDropped && this.state !== STATE_IDLE ) {
 
+			if ( this.cam ) this.cam.shake( SHAKE_MAGNITUDE, SHAKE_DURATION );
 			this.liveScore = 0;
 			this.chainScore = 0;
 			this.chainMult = 1;

@@ -288,7 +288,7 @@ async function init() {
 
 	const lapTimer = new LapTimer( customCells, mapParam );
 	const ghost = new Ghost( scene, mapParam, models[ 'vehicle-truck-yellow' ], lapTimer );
-	const driftScore = new DriftScore( mapParam );
+	const driftScore = new DriftScore( mapParam, cam );
 
 	const _forward = new THREE.Vector3();
 	const _camLead = new THREE.Vector3();

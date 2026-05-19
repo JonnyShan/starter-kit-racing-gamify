@@ -30,6 +30,10 @@ export class Camera {
 		this.smoothedDesired = new THREE.Vector3();
 		this.initialized = false;
 
+		this._shakeMagnitude = 0;
+		this._shakeRemaining = 0;
+		this._shakeDuration = 0;
+
 		const segments = 64;
 		const points = [];
 		for ( let i = 0; i <= segments; i ++ ) {
@@ -102,9 +106,28 @@ export class Camera {
 		this.camera.position.copy( _lookPoint ).add( this.offset );
 		this.camera.lookAt( _lookPoint );
 
+		if ( this._shakeRemaining > 0 ) {
+
+			const tNorm = this._shakeRemaining / this._shakeDuration;
+			const amp = this._shakeMagnitude * tNorm * tNorm;
+			this.camera.position.x += ( Math.random() - 0.5 ) * 2 * amp;
+			this.camera.position.y += ( Math.random() - 0.5 ) * 2 * amp;
+			this.camera.position.z += ( Math.random() - 0.5 ) * 2 * amp;
+			this._shakeRemaining = Math.max( 0, this._shakeRemaining - dt );
+
+		}
+
 		this.debug.position.copy( this.smoothedDesired );
 		this.debug.position.y += 0.05;
 		this.debug.scale.set( radius, 1, radius );
+
+	}
+
+	shake( magnitude, duration ) {
+
+		this._shakeMagnitude = magnitude;
+		this._shakeRemaining = duration;
+		this._shakeDuration = duration;
 
 	}
 
