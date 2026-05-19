@@ -123,9 +123,134 @@ export class DriftScore {
 	}
 
 	update( dt, vehicle ) {
+
+		const speed = Math.abs( vehicle.linearSpeed );
+		const intensity = vehicle.driftIntensity;
+		const isDrifting = intensity > DRIFT_THRESHOLD;
+
+		const speedDropped = this.prevSpeed > 0.3 && speed < this.prevSpeed * CRASH_SPEED_DROP_RATIO;
+		if ( speedDropped && this.state !== STATE_IDLE ) {
+
+			this.liveScore = 0;
+			this.chainScore = 0;
+			this.chainMult = 1;
+			this.state = STATE_IDLE;
+
+		}
+
+		if ( this.state === STATE_IDLE ) {
+
+			if ( isDrifting ) this.state = STATE_DRIFTING;
+
+		} else if ( this.state === STATE_DRIFTING ) {
+
+			const slipAbs = Math.abs( Math.atan2( vehicle.lateralSpeed, vehicle.linearSpeed ) );
+			this.liveScore += slipAbs * speed * dt * SCORE_SCALE;
+
+			if ( ! isDrifting ) {
+
+				this.chainScore += this.liveScore * this.chainMult;
+				this.chainMult += 1;
+				this.liveScore = 0;
+				this.graceTimer = 0;
+				this.state = STATE_GRACE;
+
+			}
+
+		} else if ( this.state === STATE_GRACE ) {
+
+			this.graceTimer += dt;
+
+			if ( isDrifting ) {
+
+				this.state = STATE_DRIFTING;
+
+			} else if ( this.graceTimer >= CHAIN_GRACE_SECONDS ) {
+
+				this._finalizeChain();
+				this.state = STATE_IDLE;
+
+			}
+
+		}
+
+		this._render( dt );
+		this.prevSpeed = speed;
+
+	}
+
+	_finalizeChain() {
+
+		const final = this.chainScore;
+		if ( final >= MIN_CHAIN_SCORE_TO_SAVE && final > this.bestScore ) {
+
+			this.bestScore = final;
+			this._saveBest();
+
+		}
+		if ( final >= MIN_CHAIN_SCORE_TO_SAVE ) {
+
+			this._showBanner( final );
+
+		}
+		this.chainScore = 0;
+		this.liveScore = 0;
+		this.chainMult = 1;
+
+	}
+
+	_showBanner( score ) {
+
+		this.bannerEl.textContent = `${ Math.floor( score ) } POINTS!`;
+		this.bannerEl.classList.add( 'show' );
+		this.bannerTimer = BANNER_DURATION_SECONDS;
+
+	}
+
+	_render( dt ) {
+
+		const total = Math.floor( this.liveScore + this.chainScore );
+		this.scoreEl.textContent = total;
+
+		if ( this.state === STATE_IDLE ) {
+
+			this.panelEl.classList.add( 'idle' );
+			this.panelEl.classList.remove( 'chaining' );
+
+		} else {
+
+			this.panelEl.classList.remove( 'idle' );
+			if ( this.chainMult > 1 ) {
+
+				this.chainEl.textContent = `CHAIN x${ this.chainMult }`;
+				this.panelEl.classList.add( 'chaining' );
+
+			} else {
+
+				this.panelEl.classList.remove( 'chaining' );
+
+			}
+
+		}
+
+		this.bestEl.textContent = `BEST ${ Math.floor( this.bestScore ) }`;
+
+		if ( this.bannerTimer > 0 ) {
+
+			this.bannerTimer -= dt;
+			if ( this.bannerTimer <= 0 ) this.bannerEl.classList.remove( 'show' );
+
+		}
+
 	}
 
 	dispose() {
+
+		if ( this.panelEl ) this.panelEl.remove();
+		if ( this.bannerEl ) this.bannerEl.remove();
+		this.panelEl = null;
+		this.bannerEl = null;
+
 	}
 
 }

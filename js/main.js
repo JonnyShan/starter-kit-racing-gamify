@@ -275,6 +275,7 @@ async function init() {
 
 	const lapTimer = new LapTimer( customCells, mapParam );
 	const ghost = new Ghost( scene, mapParam, models[ 'vehicle-truck-yellow' ], lapTimer );
+	const driftScore = new DriftScore( mapParam );
 
 	const _forward = new THREE.Vector3();
 	const _camLead = new THREE.Vector3();
@@ -326,6 +327,7 @@ async function init() {
 		const hasInput = input.touchActive || Math.abs( input.x ) > 0.05 || Math.abs( input.z ) > 0.05;
 		lapTimer.update( dt, vehicle.spherePos, hasInput );
 		ghost.update( dt, vehicle, lapTimer.currentLapTime );
+		driftScore.update( dt, vehicle );
 
 		renderer.render( scene, cam.camera );
 
