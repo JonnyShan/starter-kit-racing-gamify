@@ -4,6 +4,8 @@ const CHAIN_GRACE_SECONDS = 1.5;
 const CRASH_SPEED_DROP_RATIO = 0.3;
 const BANNER_DURATION_SECONDS = 1.5;
 const MIN_CHAIN_SCORE_TO_SAVE = 50;
+const DONUT_ANGLE = Math.PI * 2;
+const DONUT_TOAST_SECONDS = 1.2;
 const STORAGE_PREFIX = 'racing.driftScore.';
 
 const STATE_IDLE = 0;
@@ -38,6 +40,8 @@ export class DriftScore {
 		this.graceTimer = 0;
 		this.bannerTimer = 0;
 		this.prevSpeed = 0;
+		this.driftYawAccum = 0;
+		this.donutToastTimer = 0;
 		this.bestScore = this._loadBest();
 
 		this._buildUI();
@@ -77,6 +81,16 @@ export class DriftScore {
 			}
 			#drift-score.idle .score { color: #888; text-shadow: none; }
 			#drift-score .best { opacity: 0.6; font-size: 10px; letter-spacing: 0.08em; }
+			#drift-score .donut {
+				font: 800 14px/1 -apple-system, BlinkMacSystemFont, sans-serif;
+				color: #ff6ec7;
+				text-shadow: 0 0 8px rgba(255, 110, 199, 0.7);
+				letter-spacing: 0.12em;
+				margin-top: 2px;
+				opacity: 0;
+				transition: opacity 0.3s;
+			}
+			#drift-score .donut.show { opacity: 1; }
 			#drift-banner {
 				position: absolute;
 				top: 50%;
@@ -113,7 +127,8 @@ export class DriftScore {
 		panel.innerHTML =
 			'<div class="chain">CHAIN x1</div>' +
 			'<div class="score">0</div>' +
-			`<div class="best">BEST ${ Math.floor( this.bestScore ) }</div>`;
+			`<div class="best">BEST ${ Math.floor( this.bestScore ) }</div>` +
+			'<div class="donut">DONUT!</div>';
 		document.body.appendChild( panel );
 
 		const banner = document.createElement( 'div' );
@@ -124,6 +139,7 @@ export class DriftScore {
 		this.chainEl = panel.querySelector( '.chain' );
 		this.scoreEl = panel.querySelector( '.score' );
 		this.bestEl = panel.querySelector( '.best' );
+		this.donutEl = panel.querySelector( '.donut' );
 		this.bannerEl = banner;
 
 	}
@@ -160,6 +176,7 @@ export class DriftScore {
 			this.liveScore = 0;
 			this.chainScore = 0;
 			this.chainMult = 1;
+			this.driftYawAccum = 0;
 			this.state = STATE_IDLE;
 
 		}
@@ -173,12 +190,22 @@ export class DriftScore {
 			const slipAbs = Math.abs( Math.atan2( vehicle.lateralSpeed, vehicle.linearSpeed ) );
 			this.liveScore += slipAbs * speed * dt * SCORE_SCALE;
 
+			this.driftYawAccum += vehicle.angularSpeed * dt;
+			if ( Math.abs( this.driftYawAccum ) >= DONUT_ANGLE ) {
+
+				this.chainMult += 1;
+				this._showDonutToast();
+				this.driftYawAccum = 0;
+
+			}
+
 			if ( ! isDrifting ) {
 
 				this.chainScore += this.liveScore * this.chainMult;
 				this.chainMult += 1;
 				this.liveScore = 0;
 				this.graceTimer = 0;
+				this.driftYawAccum = 0;
 				this.state = STATE_GRACE;
 
 			}
@@ -222,6 +249,14 @@ export class DriftScore {
 		this.chainScore = 0;
 		this.liveScore = 0;
 		this.chainMult = 1;
+		this.driftYawAccum = 0;
+
+	}
+
+	_showDonutToast() {
+
+		this.donutEl.classList.add( 'show' );
+		this.donutToastTimer = DONUT_TOAST_SECONDS;
 
 	}
 
@@ -269,6 +304,13 @@ export class DriftScore {
 
 			this.bannerTimer -= dt;
 			if ( this.bannerTimer <= 0 ) this.bannerEl.classList.remove( 'show' );
+
+		}
+
+		if ( this.donutToastTimer > 0 ) {
+
+			this.donutToastTimer -= dt;
+			if ( this.donutToastTimer <= 0 ) this.donutEl.classList.remove( 'show' );
 
 		}
 
