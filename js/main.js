@@ -124,6 +124,24 @@ async function loadModels() {
 
 	await Promise.all( promises );
 
+	const sakura = await buildSakuraTexture();
+	const forest = models[ 'decoration-forest' ];
+	if ( forest ) {
+
+		forest.traverse( ( child ) => {
+
+			if ( child.isMesh ) {
+
+				child.material = child.material.clone();
+				child.material.map = sakura;
+				child.material.needsUpdate = true;
+
+			}
+
+		} );
+
+	}
+
 }
 
 async function init() {
