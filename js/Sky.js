@@ -163,6 +163,30 @@ export class Sky {
 	}
 
 	dispose() {
+
+		if ( this.skydome ) {
+
+			this.scene.remove( this.skydome );
+			this.skydome.geometry.dispose();
+			this.skydome.material.dispose();
+			this.skydome = null;
+
+		}
+
+		if ( this.cloudGroup ) {
+
+			this.scene.remove( this.cloudGroup );
+			for ( const sprite of this.cloudGroup.children ) {
+
+				sprite.material.map.dispose();
+				sprite.material.dispose();
+
+			}
+
+			this.cloudGroup = null;
+
+		}
+
 	}
 
 }
