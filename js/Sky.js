@@ -69,6 +69,40 @@ export class Sky {
 
 	}
 
+	_makeCloudTexture() {
+
+		const size = 256;
+		const canvas = document.createElement( 'canvas' );
+		canvas.width = size;
+		canvas.height = size;
+		const ctx = canvas.getContext( '2d' );
+
+		const blobs = 14;
+		const cx = size * 0.5;
+		const cy = size * 0.55;
+		for ( let i = 0; i < blobs; i ++ ) {
+
+			const ang = Math.random() * Math.PI * 2;
+			const dist = Math.random() * size * 0.28;
+			const x = cx + Math.cos( ang ) * dist;
+			const y = cy + Math.sin( ang ) * dist * 0.5;
+			const r = size * ( 0.18 + Math.random() * 0.18 );
+			const grad = ctx.createRadialGradient( x, y, 0, x, y, r );
+			grad.addColorStop( 0, 'rgba(255,255,255,0.85)' );
+			grad.addColorStop( 0.5, 'rgba(255,255,255,0.45)' );
+			grad.addColorStop( 1, 'rgba(255,255,255,0)' );
+			ctx.fillStyle = grad;
+			ctx.fillRect( 0, 0, size, size );
+
+		}
+
+		const tex = new THREE.CanvasTexture( canvas );
+		tex.colorSpace = THREE.SRGBColorSpace;
+		tex.anisotropy = 4;
+		return tex;
+
+	}
+
 	update( dt, cameraPosition ) {
 	}
 
