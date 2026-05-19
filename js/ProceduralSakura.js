@@ -1,28 +1,28 @@
 import * as THREE from 'three';
 
-const TRUNK_HEIGHT = 1.2;
-const TRUNK_RADIUS_TOP = 0.10;
-const TRUNK_RADIUS_BOTTOM = 0.16;
+const TRUNK_HEIGHT = 1.6;
+const TRUNK_RADIUS_TOP = 0.14;
+const TRUNK_RADIUS_BOTTOM = 0.22;
 const TRUNK_COLOR = 0x5e3a20;
 
-const BLOSSOM_COLOR = 0xffc1d4;
-const BLOSSOM_COLOR_HIGHLIGHT = 0xffd6e3;
+const BLOSSOM_COLOR = 0xffb9d0;
+const BLOSSOM_COLOR_HIGHLIGHT = 0xffd2e0;
 
 const BLOSSOM_BLOBS = [
-	{ x:  0.00, y: 1.45, z:  0.00, size: 0.90 },
-	{ x:  0.55, y: 1.65, z:  0.20, size: 0.72 },
-	{ x: -0.50, y: 1.55, z:  0.30, size: 0.78 },
-	{ x:  0.30, y: 1.85, z: -0.40, size: 0.65 },
-	{ x: -0.25, y: 1.95, z: -0.20, size: 0.62 },
-	{ x:  0.05, y: 2.10, z:  0.40, size: 0.58 },
-	{ x:  0.40, y: 1.30, z: -0.55, size: 0.50 },
-	{ x: -0.55, y: 1.30, z: -0.30, size: 0.48 },
+	{ x:  0.00, y: 1.90, z:  0.00, size: 1.25 },
+	{ x:  0.80, y: 2.15, z:  0.30, size: 1.00 },
+	{ x: -0.75, y: 2.05, z:  0.45, size: 1.05 },
+	{ x:  0.40, y: 2.45, z: -0.55, size: 0.90 },
+	{ x: -0.35, y: 2.55, z: -0.30, size: 0.85 },
+	{ x:  0.05, y: 2.80, z:  0.55, size: 0.75 },
+	{ x:  0.55, y: 1.75, z: -0.75, size: 0.70 },
+	{ x: -0.75, y: 1.75, z: -0.40, size: 0.68 },
 ];
 
 const HIGHLIGHT_BLOBS = [
-	{ x:  0.10, y: 2.20, z:  0.10, size: 0.40 },
-	{ x: -0.30, y: 2.05, z:  0.10, size: 0.38 },
-	{ x:  0.35, y: 1.95, z: -0.10, size: 0.36 },
+	{ x:  0.15, y: 3.00, z:  0.15, size: 0.55 },
+	{ x: -0.40, y: 2.80, z:  0.15, size: 0.52 },
+	{ x:  0.50, y: 2.65, z: -0.15, size: 0.50 },
 ];
 
 export function buildProceduralSakura() {

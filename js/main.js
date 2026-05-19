@@ -52,7 +52,7 @@ const FOG_COLOR = 0xc8e2ff;
 scene.background = new THREE.Color( FOG_COLOR );
 scene.fog = new THREE.Fog( FOG_COLOR, 30, 55 );
 
-const SUN_COLOR = 0xfff2d6;
+const SUN_COLOR = 0xfffaf0;
 const SUN_INTENSITY = 4;
 const SKY_AMBIENT = 0xa3d4ff;
 const GROUND_AMBIENT = 0x6fa84a;

@@ -5,7 +5,7 @@ const TRANSITION_SECONDS = 1.5;
 const DAY = {
 	bg: 0xc8e2ff,
 	fog: 0xc8e2ff,
-	dirColor: 0xfff2d6,
+	dirColor: 0xfffaf0,
 	dirIntensity: 4,
 	hemiSky: 0xa3d4ff,
 	hemiGround: 0x6fa84a,

@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 
-const BLADE_COUNT = 1200;
-const BLADE_WIDTH = 0.18;
-const BLADE_HEIGHT = 0.55;
-const BLADE_COLOR = 0x70a942;
-const BLADE_COLOR_VARIATION = 0.18; // up to ±18% on V channel
-const TRACK_AVOID_PADDING = 1.0;    // metres clear of track edge
+const BLADE_COUNT = 600;
+const BLADE_WIDTH = 0.12;
+const BLADE_HEIGHT = 0.28;
+const BLADE_COLOR = 0x82c958;
+const BLADE_COLOR_VARIATION = 0.18;
+const TRACK_AVOID_PADDING = 1.0;
 
 const _color = new THREE.Color();
 const _hsl = { h: 0, s: 0, l: 0 };
