@@ -138,6 +138,28 @@ export class Sky {
 	}
 
 	update( dt, cameraPosition ) {
+
+		if ( ! this.cloudGroup ) return;
+
+		const wrapRange = CLOUD_RING_RADIUS * 2;
+		const halfWrap = wrapRange / 2;
+		const camX = cameraPosition.x;
+		const camZ = cameraPosition.z;
+
+		for ( const cloud of this.cloudGroup.children ) {
+
+			cloud.position.x += dt * CLOUD_DRIFT_SPEED;
+
+			const dx = cloud.position.x - camX;
+			if ( dx > halfWrap ) cloud.position.x -= wrapRange;
+			else if ( dx < - halfWrap ) cloud.position.x += wrapRange;
+
+			const dz = cloud.position.z - camZ;
+			if ( dz > halfWrap ) cloud.position.z -= wrapRange;
+			else if ( dz < - halfWrap ) cloud.position.z += wrapRange;
+
+		}
+
 	}
 
 	dispose() {

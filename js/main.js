@@ -281,6 +281,7 @@ async function init() {
 		particles.update( dt, vehicle );
 		driftMarks.update( dt, vehicle );
 		audio.update( dt, vehicle.linearSpeed / MAX_SPEED, input.z, vehicle.driftIntensity );
+		sky.update( dt, cam.camera.position );
 
 		const hasInput = input.touchActive || Math.abs( input.x ) > 0.05 || Math.abs( input.z ) > 0.05;
 		lapTimer.update( dt, vehicle.spherePos, hasInput );
