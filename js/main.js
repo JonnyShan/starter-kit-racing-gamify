@@ -49,6 +49,8 @@ const hemiLight = new THREE.HemisphereLight( 0xc8d8e8, 0x7a8a5a, 2 );
 hemiLight.position.copy( dirLight.position )
 scene.add( hemiLight );
 
+const sky = new Sky( scene );
+
 
 window.addEventListener( 'resize', () => {
 
