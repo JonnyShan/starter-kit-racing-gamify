@@ -19,6 +19,15 @@ const SPEED_SCALE = 12.5;
 const LINEAR_DAMP = 0.1;
 export const MAX_SPEED = 1.5;
 
+const REAR_GRIP_NORMAL = 5.0;
+const REAR_GRIP_HANDBRAKE = 0.6;
+const FRONT_GRIP_GRIP = 4.0;
+const FRONT_GRIP_SLIDE = 1.5;
+const CHUCK_IN_KICK = 0.8;
+const YAW_COUPLING = 3.0;
+const SLIP_THRESHOLD = 0.05;
+const DRIFT_INTENSITY_SCALE = 2.5;
+
 function lerpAngle( a, b, t ) {
 
 	let diff = b - a;
@@ -57,6 +66,10 @@ export class Vehicle {
 		this.inputZ = 0;
 
 		this.driftIntensity = 0;
+
+		this.lateralSpeed = 0;
+		this.handbrake = false;
+		this.prevHandbrake = false;
 
 	}
 
