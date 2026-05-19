@@ -15,7 +15,6 @@ import { LapTimer } from './LapTimer.js';
 import { ColorMapGLTFLoader } from './Loader.js';
 import { Sky } from './Sky.js';
 import { Ghost } from './Ghost.js';
-import { buildSakuraTexture } from './SakuraTexture.js';
 import { buildBollards } from './Bollards.js';
 import { DriftScore } from './DriftScore.js';
 import { Petals } from './Petals.js';
@@ -26,6 +25,7 @@ import { SpeedLines } from './SpeedLines.js';
 import { Countdown } from './Countdown.js';
 import { Hills } from './Hills.js';
 import { buildProceduralCar } from './ProceduralCar.js';
+import { buildProceduralSakura } from './ProceduralSakura.js';
 import { GrassBlades } from './GrassBlades.js';
 
 
@@ -141,23 +141,10 @@ async function loadModels() {
 	// Replace Kenney truck with procedural AE86-style car
 	models[ 'vehicle-truck-yellow' ] = buildProceduralCar();
 
-	const sakura = await buildSakuraTexture();
-	const forest = models[ 'decoration-forest' ];
-	if ( forest ) {
-
-		forest.traverse( ( child ) => {
-
-			if ( child.isMesh ) {
-
-				child.material = child.material.clone();
-				child.material.map = sakura;
-				child.material.needsUpdate = true;
-
-			}
-
-		} );
-
-	}
+	// Replace pine-tree forest GLB with procedural ball-cluster sakura tree.
+	// Each tree is a brown trunk with overlapping pink icosahedron blossoms,
+	// which look like cherry blossoms instead of pink-shifted conifers.
+	models[ 'decoration-forest' ] = buildProceduralSakura();
 
 }
 

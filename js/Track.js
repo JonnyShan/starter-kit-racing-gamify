@@ -185,11 +185,20 @@ export function buildTrack( scene, models, customCells ) {
 
 			const count = positions.length / 3;
 
+			// Ensure child world matrices are up to date so we can bake them
+			// into per-child cloned geometries. Procedural Group trees have
+			// per-mesh local transforms that InstancedMesh would otherwise
+			// drop (only geometry + material are used).
+			src.updateMatrixWorld( true );
+
 			src.traverse( ( child ) => {
 
 				if ( ! child.isMesh ) return;
 
-				const inst = new THREE.InstancedMesh( child.geometry, child.material, count );
+				const bakedGeom = child.geometry.clone();
+				bakedGeom.applyMatrix4( child.matrixWorld );
+
+				const inst = new THREE.InstancedMesh( bakedGeom, child.material, count );
 				inst.castShadow = true;
 				inst.receiveShadow = true;
 
