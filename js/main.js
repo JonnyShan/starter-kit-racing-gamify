@@ -187,8 +187,8 @@ async function init() {
 	dirLight.shadow.camera.bottom = - shadowExtent;
 	dirLight.shadow.camera.updateProjectionMatrix();
 
-	scene.fog.near = groundSize * 0.6;
-	scene.fog.far = groundSize * 1.5;
+	scene.fog.near = 30;
+	scene.fog.far = 110;
 
 	const GROUND_COLOR = 0x6fa84a;
 	const groundGeo = new THREE.PlaneGeometry( groundSize * 4, groundSize * 4 );

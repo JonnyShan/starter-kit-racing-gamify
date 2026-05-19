@@ -124,7 +124,7 @@ export function buildTrack( scene, models, customCells ) {
 
 		}
 
-		const pad = 3;
+		const pad = 2;
 
 		// Simple hash for deterministic pseudo-random placement
 		function hash( gx, gz ) {
@@ -148,32 +148,12 @@ export function buildTrack( scene, models, customCells ) {
 				const x = ( gx + 0.5 ) * CELL_RAW;
 				const z = ( gz + 0.5 ) * CELL_RAW;
 
-				if ( dist === 1 ) {
-
-					// Closest ring: cherry blossom forest hugs the road, with
-					// occasional grass gaps so the road still breathes.
-					const h = hash( gx, gz );
-					if ( h % 4 === 0 ) emptyPositions.push( x, z, 0 );
-					else forestPositions.push( x, z, h % 4 );
-
-				} else if ( dist === 2 ) {
-
-					// Second ring: mostly forest, ~14% chance of tents.
-					if ( hash( gx, gz ) % 7 === 0 ) {
-
-						tentPositions.push( x, z, hash( gx, gz ) % 4 );
-
-					} else {
-
-						forestPositions.push( x, z, 0 );
-
-					}
-
-				} else {
-
-					forestPositions.push( x, z, 0 );
-
-				}
+				const h = hash( gx, gz );
+				// Sparse tree placement — about 1/3 of perimeter cells get a
+				// tree, rest are grass. Dense wall of pink looked like a
+				// peach fog band; sparse trees read as individuals.
+				if ( h % 3 === 0 ) forestPositions.push( x, z, h % 4 );
+				else emptyPositions.push( x, z, 0 );
 
 			}
 
