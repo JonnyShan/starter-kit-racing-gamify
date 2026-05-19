@@ -60,6 +60,29 @@ export class Ghost {
 	}
 
 	update( dt, vehicle, lapTime ) {
+
+		if ( this.lapTimer.running && this.recordCount < GHOST_MAX_SAMPLES ) {
+
+			this._recordAccum += dt;
+			while ( this._recordAccum >= GHOST_SAMPLE_INTERVAL && this.recordCount < GHOST_MAX_SAMPLES ) {
+
+				const o = this.recordCount * GHOST_FLOATS_PER_SAMPLE;
+				const p = vehicle.container.position;
+				const q = vehicle.container.quaternion;
+				this.recordBuffer[ o     ] = p.x;
+				this.recordBuffer[ o + 1 ] = p.y;
+				this.recordBuffer[ o + 2 ] = p.z;
+				this.recordBuffer[ o + 3 ] = q.x;
+				this.recordBuffer[ o + 4 ] = q.y;
+				this.recordBuffer[ o + 5 ] = q.z;
+				this.recordBuffer[ o + 6 ] = q.w;
+				this.recordCount += 1;
+				this._recordAccum -= GHOST_SAMPLE_INTERVAL;
+
+			}
+
+		}
+
 	}
 
 	dispose() {
