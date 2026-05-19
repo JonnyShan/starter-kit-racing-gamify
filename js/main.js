@@ -24,6 +24,7 @@ import { Stars } from './Stars.js';
 import { Headlights } from './Headlights.js';
 import { SpeedLines } from './SpeedLines.js';
 import { Countdown } from './Countdown.js';
+import { Hills } from './Hills.js';
 
 
 const renderer = new THREE.WebGLRenderer( { antialias: true, outputBufferType: THREE.HalfFloatType } );
@@ -203,6 +204,8 @@ async function init() {
 	ground.position.set( bounds.centerX, - 0.15, bounds.centerZ );
 	ground.receiveShadow = true;
 	scene.add( ground );
+
+	new Hills( scene, bounds );
 
 	buildTrack( scene, models, customCells );
 	buildBollards( scene, customCells || TRACK_CELLS );
