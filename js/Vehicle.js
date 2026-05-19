@@ -193,7 +193,30 @@ export class Vehicle {
 
 			const steeringGrip = THREE.MathUtils.clamp( Math.abs( this.linearSpeed ), 0.2, 1.0 );
 
-			const targetAngular = - this.inputX * steeringGrip * 4 * direction;
+			const rearGrip = this.handbrake ? REAR_GRIP_HANDBRAKE : REAR_GRIP_NORMAL;
+			const speedDenom = Math.abs( this.linearSpeed ) + 0.1;
+			const slipMag = Math.min( Math.abs( this.lateralSpeed ) / speedDenom, 1 );
+			const frontGrip = THREE.MathUtils.lerp( FRONT_GRIP_GRIP, FRONT_GRIP_SLIDE, slipMag );
+
+			if ( this.handbrake && ! this.prevHandbrake && Math.abs( this.linearSpeed ) > 0.2 ) {
+
+				this.lateralSpeed += this.inputX * this.linearSpeed * CHUCK_IN_KICK;
+
+			}
+
+			// Lateral decay: rear grip pulls lateral velocity back to zero.
+			this.lateralSpeed *= Math.max( 0, 1 - rearGrip * dt );
+
+			// Yaw coupling: drag heading toward velocity direction.
+			if ( Math.abs( this.linearSpeed ) > SLIP_THRESHOLD ) {
+
+				const slipDir = Math.atan2( this.lateralSpeed, this.linearSpeed );
+				const couplingRate = YAW_COUPLING * rearGrip * slipMag;
+				this.container.rotateY( slipDir * couplingRate * dt );
+
+			}
+
+			const targetAngular = - this.inputX * steeringGrip * frontGrip * direction;
 			this.angularSpeed = THREE.MathUtils.lerp( this.angularSpeed, targetAngular, dt * 4 );
 
 			this.container.rotateY( this.angularSpeed * dt );
@@ -238,12 +261,13 @@ export class Vehicle {
 			_right.normalize();
 
 			const angvel = this.rigidBody.motionProperties.angularVelocity;
-			const drive = this.linearSpeed * 100 * dt;
+			const fwdDrive = this.linearSpeed * 100 * dt;
+			const latDrive = this.lateralSpeed * 100 * dt;
 
 			rigidBody.setAngularVelocity( this.physicsWorld, this.rigidBody, [
-				angvel[ 0 ] + _right.x * drive,
+				angvel[ 0 ] + _right.x * fwdDrive - _forward.x * latDrive,
 				angvel[ 1 ],
-				angvel[ 2 ] + _right.z * drive
+				angvel[ 2 ] + _right.z * fwdDrive - _forward.z * latDrive
 			] );
 
 			const pos = this.rigidBody.position;
