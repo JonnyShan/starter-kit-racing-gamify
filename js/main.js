@@ -21,6 +21,7 @@ import { DriftScore } from './DriftScore.js';
 import { Petals } from './Petals.js';
 import { DayNight } from './DayNight.js';
 import { Stars } from './Stars.js';
+import { Headlights } from './Headlights.js';
 
 
 const renderer = new THREE.WebGLRenderer( { antialias: true, outputBufferType: THREE.HalfFloatType } );
@@ -266,6 +267,8 @@ async function init() {
 	const vehicleGroup = vehicle.init( models[ 'vehicle-truck-yellow' ] );
 	scene.add( vehicleGroup );
 
+	const headlights = new Headlights( scene, vehicle, hemiLight );
+
 	dirLight.target = vehicleGroup;
 
 	const cam = new Camera();
@@ -332,6 +335,7 @@ async function init() {
 		petals.update( dt, cam.camera.position );
 		dayNight.update( dt );
 		stars.update( dt );
+		headlights.update( dt );
 
 		const hasInput = input.touchActive || Math.abs( input.x ) > 0.05 || Math.abs( input.z ) > 0.05;
 		lapTimer.update( dt, vehicle.spherePos, hasInput );
