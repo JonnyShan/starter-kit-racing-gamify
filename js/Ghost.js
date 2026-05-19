@@ -13,6 +13,24 @@ const _qa = new THREE.Quaternion();
 const _qb = new THREE.Quaternion();
 const _qr = new THREE.Quaternion();
 
+function bufferToBase64( float32 ) {
+
+	const bytes = new Uint8Array( float32.buffer, float32.byteOffset, float32.byteLength );
+	let bin = '';
+	for ( let i = 0; i < bytes.length; i ++ ) bin += String.fromCharCode( bytes[ i ] );
+	return btoa( bin );
+
+}
+
+function base64ToBuffer( str ) {
+
+	const bin = atob( str );
+	const bytes = new Uint8Array( bin.length );
+	for ( let i = 0; i < bin.length; i ++ ) bytes[ i ] = bin.charCodeAt( i );
+	return new Float32Array( bytes.buffer );
+
+}
+
 export class Ghost {
 
 	constructor( scene, trackId, vehicleModel, lapTimer ) {
@@ -28,6 +46,8 @@ export class Ghost {
 		this.ghostBuffer = null;
 		this.mesh = this._buildGhostMesh( vehicleModel );
 		scene.add( this.mesh );
+
+		this._load();
 
 	}
 
@@ -56,6 +76,27 @@ export class Ghost {
 
 		mesh.visible = false;
 		return mesh;
+
+	}
+
+	_save() {
+
+		if ( ! this.ghostBuffer ) return;
+		try {
+			localStorage.setItem( this.storageKey, bufferToBase64( this.ghostBuffer ) );
+		} catch {}
+
+	}
+
+	_load() {
+
+		try {
+			const str = localStorage.getItem( this.storageKey );
+			if ( ! str ) return;
+			const buf = base64ToBuffer( str );
+			if ( buf.length === 0 || buf.length % GHOST_FLOATS_PER_SAMPLE !== 0 ) return;
+			this.ghostBuffer = buf;
+		} catch {}
 
 	}
 
