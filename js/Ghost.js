@@ -49,6 +49,25 @@ export class Ghost {
 
 		this._load();
 
+		this.lapTimer.onLapComplete = ( time, isBest ) => this._onLapComplete( time, isBest );
+
+	}
+
+	_onLapComplete( time, isBest ) {
+
+		if ( isBest && time <= GHOST_MAX_SECONDS && this.recordCount > 0 ) {
+
+			this.ghostBuffer = this.recordBuffer.slice(
+				0,
+				this.recordCount * GHOST_FLOATS_PER_SAMPLE,
+			);
+			this._save();
+
+		}
+
+		this.recordCount = 0;
+		this._recordAccum = 0;
+
 	}
 
 	_buildGhostMesh( vehicleModel ) {
