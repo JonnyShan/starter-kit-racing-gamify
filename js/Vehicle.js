@@ -299,6 +299,9 @@ export class Vehicle {
 			this.linearSpeed = 0;
 			this.angularSpeed = 0;
 			this.acceleration = 0;
+			this.lateralSpeed = 0;
+			this.handbrake = false;
+			this.prevHandbrake = false;
 			this.container.rotation.set( 0, 0, 0 );
 			this.container.quaternion.identity();
 
@@ -320,8 +323,11 @@ export class Vehicle {
 		this.updateBody( dt );
 		this.updateWheels( dt );
 
-		this.driftIntensity = Math.abs( this.linearSpeed - this.acceleration ) +
-			( this.bodyNode ? Math.abs( this.bodyNode.rotation.z ) * 2 : 0 );
+		const speedAbs = Math.abs( this.linearSpeed );
+		const slipAngleAbs = speedAbs > SLIP_THRESHOLD
+			? Math.abs( Math.atan2( this.lateralSpeed, this.linearSpeed ) )
+			: 0;
+		this.driftIntensity = slipAngleAbs * speedAbs * DRIFT_INTENSITY_SCALE;
 
 	}
 
@@ -348,7 +354,7 @@ export class Vehicle {
 
 		this.bodyNode.rotation.z = lerpAngle(
 			this.bodyNode.rotation.z,
-			-( this.inputX / 5 ) * this.linearSpeed,
+			-( this.inputX / 5 ) * this.linearSpeed - this.lateralSpeed * 0.3,
 			dt * 5
 		);
 
@@ -358,11 +364,16 @@ export class Vehicle {
 
 	updateWheels( dt ) {
 
+		const rearExtra = this.handbrake ? 0.6 : 0;
+
 		for ( const wheel of this.wheels ) {
 
 			wheel.rotation.x += this.acceleration;
 
 		}
+
+		if ( this.wheelBL ) this.wheelBL.rotation.x += rearExtra;
+		if ( this.wheelBR ) this.wheelBR.rotation.x += rearExtra;
 
 		if ( this.wheelFL ) {
 
