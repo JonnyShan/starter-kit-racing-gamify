@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { rigidBody } from 'crashcat';
+import { CELL_RAW, GRID_SCALE, buildElevationMap, computeCellTransform } from './Track.js';
 
 const _logoTex = new THREE.TextureLoader().load( 'sprites/gamify-logo.png' );
 _logoTex.colorSpace = THREE.SRGBColorSpace;
@@ -70,6 +71,27 @@ export class Vehicle {
 		this.lateralSpeed = 0;
 		this.handbrake = false;
 		this.prevHandbrake = false;
+
+		// Last on-track position — restored on respawn (ball falling below
+		// Y=-10) so the player resumes near where they fell off, not at the
+		// origin. Updated each frame while the ball is sitting on a road slab.
+		this.lastSafePos = new THREE.Vector3( 3.5, 0.5, 5 );
+		this.lastSafeYaw = 0;
+
+		// Road-surface pitch tracking — applied to bodyNode so the visible
+		// car tilts to match the slope it's sitting on.
+		this.roadPitch = 0;
+		this.cells = null;
+		this.elevMap = null;
+
+	}
+
+	// Called from main.js after cells are loaded so the vehicle can look up
+	// the slope under its current position.
+	setCells( cells ) {
+
+		this.cells = cells;
+		this.elevMap = buildElevationMap( cells );
 
 	}
 
@@ -284,17 +306,31 @@ export class Vehicle {
 			dt
 		);
 
+		// Record last on-track position so respawn snaps back to it instead
+		// of origin. Heuristic: ball sits on a road slab when Y is above the
+		// off-track ground plane (~ -0.1). Lift slightly when restoring.
+		if ( this.spherePos.y > 0 ) {
+
+			this.lastSafePos.copy( this.spherePos );
+			this.lastSafeYaw = this.container.rotation.y;
+
+		}
+
 		if ( this.spherePos.y < - 10 ) {
+
+			const sx = this.lastSafePos.x;
+			const sy = this.lastSafePos.y + 1.0;
+			const sz = this.lastSafePos.z;
 
 			if ( this.rigidBody ) {
 
-				rigidBody.setPosition( this.physicsWorld, this.rigidBody, [ 3.5, 0.5, 5 ], false );
+				rigidBody.setPosition( this.physicsWorld, this.rigidBody, [ sx, sy, sz ], false );
 				rigidBody.setLinearVelocity( this.physicsWorld, this.rigidBody, [ 0, 0, 0 ] );
 				rigidBody.setAngularVelocity( this.physicsWorld, this.rigidBody, [ 0, 0, 0 ] );
 
 			}
 
-			this.spherePos.set( 3.5, 0.5, 5 );
+			this.spherePos.set( sx, sy, sz );
 			this.sphereVel.set( 0, 0, 0 );
 			this.linearSpeed = 0;
 			this.angularSpeed = 0;
@@ -302,8 +338,8 @@ export class Vehicle {
 			this.lateralSpeed = 0;
 			this.handbrake = false;
 			this.prevHandbrake = false;
-			this.container.rotation.set( 0, 0, 0 );
-			this.container.quaternion.identity();
+			this.container.rotation.set( 0, this.lastSafeYaw, 0 );
+			this.container.quaternion.setFromAxisAngle( _up, this.lastSafeYaw );
 
 		}
 
@@ -320,6 +356,7 @@ export class Vehicle {
 
 		}
 
+		this.updateRoadPitch( dt );
 		this.updateBody( dt );
 		this.updateWheels( dt );
 
@@ -342,13 +379,50 @@ export class Vehicle {
 
 	}
 
+	updateRoadPitch( dt ) {
+
+		// Look up the cell the vehicle is currently over and lerp the
+		// stored road-pitch toward that cell's slope. Off-track => 0.
+		if ( ! this.elevMap || ! this.cells ) return;
+
+		const cellW = CELL_RAW * GRID_SCALE;
+		const gx = Math.floor( this.spherePos.x / cellW );
+		const gz = Math.floor( this.spherePos.z / cellW );
+
+		let target = 0;
+		const list = this.elevMap.get( gx + ',' + gz );
+		if ( list ) {
+
+			// Pick cell at this (gx, gz) closest in Y to the ball — handles
+			// bridge cells overlapping the same grid coord.
+			const ballY = this.spherePos.y;
+			let bestCell = null;
+			let bestDist = Infinity;
+			for ( const c of this.cells ) {
+
+				if ( c[ 0 ] !== gx || c[ 1 ] !== gz ) continue;
+				const cellY = c[ 4 ] ?? 0;
+				const d = Math.abs( ballY - cellY );
+				if ( d < bestDist ) { bestDist = d; bestCell = c; }
+
+			}
+			if ( bestCell ) target = computeCellTransform( bestCell, this.elevMap ).pitch;
+
+		}
+
+		this.roadPitch = THREE.MathUtils.lerp( this.roadPitch, target, dt * 6 );
+
+	}
+
 	updateBody( dt ) {
 
 		if ( ! this.bodyNode ) return;
 
+		// Combine acceleration-driven pitch lean with the road slope.
+		const accelPitch = - ( this.linearSpeed - this.acceleration ) / 6;
 		this.bodyNode.rotation.x = lerpAngle(
 			this.bodyNode.rotation.x,
-			-( this.linearSpeed - this.acceleration ) / 6,
+			accelPitch + this.roadPitch,
 			dt * 10
 		);
 

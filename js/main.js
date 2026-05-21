@@ -26,6 +26,8 @@ import { Countdown } from './Countdown.js';
 import { Hills } from './Hills.js';
 import { buildProceduralSakura } from './ProceduralSakura.js';
 import { buildProceduralRoad } from './ProceduralRoad.js';
+import { FinishLine } from './FinishLine.js';
+import { Mountains } from './Mountains.js';
 import { GrassBlades } from './GrassBlades.js';
 
 
@@ -211,10 +213,13 @@ async function init() {
 	scene.add( ground );
 
 	new Hills( scene, bounds );
+	new Mountains( scene, bounds );
 	new GrassBlades( scene, bounds, customCells || TRACK_CELLS );
 
 	buildTrack( scene, models, customCells );
 	buildBollards( scene, customCells || TRACK_CELLS );
+
+	const finishLine = new FinishLine( scene, customCells || TRACK_CELLS );
 
 	// Probes
 
@@ -265,6 +270,7 @@ async function init() {
 	const vehicle = new Vehicle();
 	vehicle.rigidBody = sphereBody;
 	vehicle.physicsWorld = world;
+	vehicle.setCells( customCells || TRACK_CELLS );
 
 	if ( spawn ) {
 
@@ -350,6 +356,7 @@ async function init() {
 
 		const hasInput = input.touchActive || Math.abs( input.x ) > 0.05 || Math.abs( input.z ) > 0.05;
 		lapTimer.update( dt, vehicle.spherePos, hasInput );
+		finishLine.update( dt, vehicle.spherePos, hasInput );
 		ghost.update( dt, vehicle, lapTimer.currentLapTime );
 		driftScore.update( dt, vehicle );
 
