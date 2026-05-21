@@ -120,6 +120,19 @@ export class GameAudio {
 		window.addEventListener( 'click', unlock );
 		window.addEventListener( 'touchstart', unlock );
 
+		// Mute toggle — press 'M'. Persists across sessions.
+		this.muted = localStorage.getItem( 'racing.muted' ) === '1';
+		if ( this.muted ) this.listener.setMasterVolume( 0 );
+
+		window.addEventListener( 'keydown', ( e ) => {
+
+			if ( e.code !== 'KeyM' ) return;
+			this.muted = ! this.muted;
+			this.listener.setMasterVolume( this.muted ? 0 : 1 );
+			localStorage.setItem( 'racing.muted', this.muted ? '1' : '0' );
+
+		} );
+
 	}
 
 	checkReady() {

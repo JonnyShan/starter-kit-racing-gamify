@@ -7,10 +7,13 @@ export const GRID_SCALE = 0.75;
 
 // Elevation system — see computeCellTransform() below.
 // cellY (5th tuple element, optional, default 0) is an INTEGER step count.
-// World-Y rise per step = STEP_HEIGHT (pre-GRID_SCALE). With STEP_HEIGHT=1.5
-// and GRID_SCALE=0.75 -> 1.125 world units per step. Across one cell length
-// (CELL_RAW=9.99) one step delta = ~8.5 deg grade — drivable.
-export const STEP_HEIGHT = 1.5;
+// World-Y rise per step = STEP_HEIGHT (pre-GRID_SCALE). With STEP_HEIGHT=1.0
+// and GRID_SCALE=0.75 -> 0.75 world units per step. Across one cell length
+// (CELL_RAW=9.99) a +1 Y delta cell delivers a ~5.7 deg grade — gentle.
+// Lay continuous ramps (Y incrementing by 1 each cell) for seam-free joints;
+// the cell-center model keeps front-end-of-A and back-end-of-B aligned when
+// the Y delta is the same on both sides.
+export const STEP_HEIGHT = 1.0;
 
 const _dummy = new THREE.Object3D();
 const _axisY = new THREE.Vector3( 0, 1, 0 );
@@ -36,46 +39,46 @@ const _pitchQ = new THREE.Quaternion();
 //   S->W = orient 22   E->S = orient 0
 //   W->S = orient 16   S->E = orient 10
 export const TRACK_CELLS = [
-	// Section 1: south start, gentle climb 0 -> 3
+	// Section 1: flat start then continuous climb 0 -> 3
 	[  0,  0, 'track-straight',  0, 0 ],
 	[  0,  1, 'track-straight',  0, 0 ],
-	[  0,  2, 'track-straight',  0, 0 ],
-	[  0,  3, 'track-straight',  0, 1 ],
-	[  0,  4, 'track-straight',  0, 1 ],
-	[  0,  5, 'track-straight',  0, 2 ],
-	[  0,  6, 'track-straight',  0, 2 ],
+	[  0,  2, 'track-straight',  0, 1 ],
+	[  0,  3, 'track-straight',  0, 2 ],
+	[  0,  4, 'track-straight',  0, 3 ],
+	[  0,  5, 'track-straight',  0, 3 ],
+	[  0,  6, 'track-straight',  0, 3 ],
 	[  0,  7, 'track-straight',  0, 3 ],
 	[  0,  8, 'track-straight',  0, 3 ],
 	[  0,  9, 'track-straight',  0, 3 ],
-	// Section 2: jog west at altitude (plateau)
-	[  0, 10, 'track-corner',   22, 3 ], // S->W
+	// Section 2: jog west at altitude
+	[  0, 10, 'track-corner',   22, 3 ],
 	[ -1, 10, 'track-straight', 22, 3 ],
 	[ -2, 10, 'track-straight', 22, 3 ],
-	[ -3, 10, 'track-corner',   16, 3 ], // W->S
-	// Section 3: long descent 3 -> 0
+	[ -3, 10, 'track-corner',   16, 3 ],
+	// Section 3: continuous descent 3 -> 0
 	[ -3, 11, 'track-straight',  0, 3 ],
 	[ -3, 12, 'track-straight',  0, 2 ],
-	[ -3, 13, 'track-straight',  0, 2 ],
-	[ -3, 14, 'track-straight',  0, 1 ],
-	[ -3, 15, 'track-straight',  0, 1 ],
+	[ -3, 13, 'track-straight',  0, 1 ],
+	[ -3, 14, 'track-straight',  0, 0 ],
+	[ -3, 15, 'track-straight',  0, 0 ],
 	[ -3, 16, 'track-straight',  0, 0 ],
 	[ -3, 17, 'track-straight',  0, 0 ],
 	[ -3, 18, 'track-straight',  0, 0 ],
 	[ -3, 19, 'track-straight',  0, 0 ],
 	[ -3, 20, 'track-straight',  0, 0 ],
 	// Section 4: jog east in valley
-	[ -3, 21, 'track-corner',   10, 0 ], // S->E
+	[ -3, 21, 'track-corner',   10, 0 ],
 	[ -2, 21, 'track-straight', 22, 0 ],
 	[ -1, 21, 'track-straight', 22, 0 ],
-	[  0, 21, 'track-corner',    0, 0 ], // E->S
-	// Section 5: long climb 0 -> 4 (highest peak)
+	[  0, 21, 'track-corner',    0, 0 ],
+	// Section 5: continuous climb 0 -> 4 (highest peak)
 	[  0, 22, 'track-straight',  0, 0 ],
 	[  0, 23, 'track-straight',  0, 1 ],
-	[  0, 24, 'track-straight',  0, 1 ],
-	[  0, 25, 'track-straight',  0, 2 ],
-	[  0, 26, 'track-straight',  0, 2 ],
-	[  0, 27, 'track-straight',  0, 3 ],
-	[  0, 28, 'track-straight',  0, 3 ],
+	[  0, 24, 'track-straight',  0, 2 ],
+	[  0, 25, 'track-straight',  0, 3 ],
+	[  0, 26, 'track-straight',  0, 4 ],
+	[  0, 27, 'track-straight',  0, 4 ],
+	[  0, 28, 'track-straight',  0, 4 ],
 	[  0, 29, 'track-straight',  0, 4 ],
 	[  0, 30, 'track-straight',  0, 4 ],
 	[  0, 31, 'track-straight',  0, 4 ],
@@ -84,14 +87,14 @@ export const TRACK_CELLS = [
 	[ -1, 32, 'track-straight', 22, 4 ],
 	[ -2, 32, 'track-straight', 22, 4 ],
 	[ -3, 32, 'track-corner',   16, 4 ],
-	// Section 7: descent 4 -> 0
+	// Section 7: continuous descent 4 -> 0
 	[ -3, 33, 'track-straight',  0, 4 ],
 	[ -3, 34, 'track-straight',  0, 3 ],
-	[ -3, 35, 'track-straight',  0, 3 ],
-	[ -3, 36, 'track-straight',  0, 2 ],
-	[ -3, 37, 'track-straight',  0, 2 ],
-	[ -3, 38, 'track-straight',  0, 1 ],
-	[ -3, 39, 'track-straight',  0, 1 ],
+	[ -3, 35, 'track-straight',  0, 2 ],
+	[ -3, 36, 'track-straight',  0, 1 ],
+	[ -3, 37, 'track-straight',  0, 0 ],
+	[ -3, 38, 'track-straight',  0, 0 ],
+	[ -3, 39, 'track-straight',  0, 0 ],
 	[ -3, 40, 'track-straight',  0, 0 ],
 	[ -3, 41, 'track-straight',  0, 0 ],
 	[ -3, 42, 'track-straight',  0, 0 ],
@@ -100,27 +103,27 @@ export const TRACK_CELLS = [
 	[ -2, 43, 'track-straight', 22, 0 ],
 	[ -1, 43, 'track-straight', 22, 0 ],
 	[  0, 43, 'track-corner',    0, 0 ],
-	// Section 9: rolling hills (down up down)
+	// Section 9: rolling hill (up to 2, back down)
 	[  0, 44, 'track-straight',  0, 0 ],
 	[  0, 45, 'track-straight',  0, 1 ],
-	[  0, 46, 'track-straight',  0, 1 ],
+	[  0, 46, 'track-straight',  0, 2 ],
 	[  0, 47, 'track-straight',  0, 2 ],
 	[  0, 48, 'track-straight',  0, 2 ],
-	[  0, 49, 'track-straight',  0, 3 ],
-	[  0, 50, 'track-straight',  0, 3 ],
-	[  0, 51, 'track-straight',  0, 2 ],
-	[  0, 52, 'track-straight',  0, 2 ],
-	[  0, 53, 'track-straight',  0, 1 ],
-	// Section 10: jog west, rolling
-	[  0, 54, 'track-corner',   22, 1 ],
-	[ -1, 54, 'track-straight', 22, 1 ],
-	[ -2, 54, 'track-straight', 22, 1 ],
-	[ -3, 54, 'track-corner',   16, 1 ],
-	// Section 11: descend to lowest section
-	[ -3, 55, 'track-straight',  0, 1 ],
-	[ -3, 56, 'track-straight',  0, 0 ],
-	[ -3, 57, 'track-straight',  0, 0 ],
-	[ -3, 58, 'track-straight',  0, 0 ],
+	[  0, 49, 'track-straight',  0, 1 ],
+	[  0, 50, 'track-straight',  0, 0 ],
+	[  0, 51, 'track-straight',  0, 0 ],
+	[  0, 52, 'track-straight',  0, 0 ],
+	[  0, 53, 'track-straight',  0, 0 ],
+	// Section 10: jog west
+	[  0, 54, 'track-corner',   22, 0 ],
+	[ -1, 54, 'track-straight', 22, 0 ],
+	[ -2, 54, 'track-straight', 22, 0 ],
+	[ -3, 54, 'track-corner',   16, 0 ],
+	// Section 11: long flat with a soft rise to Y=1 and back
+	[ -3, 55, 'track-straight',  0, 0 ],
+	[ -3, 56, 'track-straight',  0, 1 ],
+	[ -3, 57, 'track-straight',  0, 1 ],
+	[ -3, 58, 'track-straight',  0, 1 ],
 	[ -3, 59, 'track-straight',  0, 0 ],
 	[ -3, 60, 'track-straight',  0, 0 ],
 	[ -3, 61, 'track-straight',  0, 0 ],
@@ -132,12 +135,12 @@ export const TRACK_CELLS = [
 	[ -2, 65, 'track-straight', 22, 0 ],
 	[ -1, 65, 'track-straight', 22, 0 ],
 	[  0, 65, 'track-corner',    0, 0 ],
-	// Section 13: final climb 0 -> 3
+	// Section 13: final climb 0 -> 3 (viewpoint)
 	[  0, 66, 'track-straight',  0, 0 ],
 	[  0, 67, 'track-straight',  0, 1 ],
-	[  0, 68, 'track-straight',  0, 1 ],
-	[  0, 69, 'track-straight',  0, 2 ],
-	[  0, 70, 'track-straight',  0, 2 ],
+	[  0, 68, 'track-straight',  0, 2 ],
+	[  0, 69, 'track-straight',  0, 3 ],
+	[  0, 70, 'track-straight',  0, 3 ],
 	[  0, 71, 'track-straight',  0, 3 ],
 	[  0, 72, 'track-straight',  0, 3 ],
 	[  0, 73, 'track-straight',  0, 3 ],
@@ -148,12 +151,12 @@ export const TRACK_CELLS = [
 	[ -1, 76, 'track-straight', 22, 3 ],
 	[ -2, 76, 'track-straight', 22, 3 ],
 	[ -3, 76, 'track-corner',   16, 3 ],
-	// Section 15: final long descent + flat finish straight
+	// Section 15: final continuous descent + flat finish straight
 	[ -3, 77, 'track-straight',  0, 3 ],
 	[ -3, 78, 'track-straight',  0, 2 ],
-	[ -3, 79, 'track-straight',  0, 2 ],
-	[ -3, 80, 'track-straight',  0, 1 ],
-	[ -3, 81, 'track-straight',  0, 1 ],
+	[ -3, 79, 'track-straight',  0, 1 ],
+	[ -3, 80, 'track-straight',  0, 0 ],
+	[ -3, 81, 'track-straight',  0, 0 ],
 	[ -3, 82, 'track-straight',  0, 0 ],
 	[ -3, 83, 'track-straight',  0, 0 ],
 	[ -3, 84, 'track-straight',  0, 0 ],
@@ -163,6 +166,7 @@ export const TRACK_CELLS = [
 	[ -3, 88, 'track-straight',  0, 0 ],
 	[ -3, 89, 'track-straight',  0, 0 ],
 	[ -3, 90, 'track-straight',  0, 0 ],
+	[ -3, 91, 'track-straight',  0, 0 ],
 ];
 
 // Build a map: key = "gx,gz" -> array of cell Y values (handles bridges).
