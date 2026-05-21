@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CELL_RAW, GRID_SCALE, ORIENT_DEG } from './Track.js';
+import { CELL_RAW, GRID_SCALE, ORIENT_DEG, STEP_HEIGHT } from './Track.js';
 
 const BOLLARD_RADIUS = 0.12;
 const BOLLARD_HEIGHT = 1.0;
@@ -53,10 +53,15 @@ export function buildBollards( scene, cells ) {
 	const cellHalfWorld = cellWorld / 2;
 	const outerRadius = ( 2 * ( CELL_RAW / 2 ) - 0.25 ) * GRID_SCALE;
 	const placeRadius = outerRadius - BOLLARD_OFFSET;
-	const trackY = - 0.5 + BOLLARD_HEIGHT / 2 + BOLLARD_BASE_LIFT;
+	const trackYBase = - 0.5 + BOLLARD_HEIGHT / 2 + BOLLARD_BASE_LIFT;
 
 	let idx = 0;
-	for ( const [ gx, gz, _, orient ] of corners ) {
+	for ( const cell of corners ) {
+
+		const [ gx, gz, _, orient ] = cell;
+		const cellY = cell[ 4 ] ?? 0;
+		// Corners stay flat — lift bollards by integer-step elevation only.
+		const trackY = trackYBase + cellY * STEP_HEIGHT * GRID_SCALE;
 
 		const cellCenterX = ( gx + 0.5 ) * cellWorld;
 		const cellCenterZ = ( gz + 0.5 ) * cellWorld;

@@ -5,48 +5,155 @@ export const ORIENT_DEG = { 0: 0, 10: 180, 16: 90, 22: 270 };
 export const CELL_RAW = 9.99;
 export const GRID_SCALE = 0.75;
 
-const _dummy = new THREE.Object3D();
+// Elevation system — see computeCellTransform() below.
+// cellY (5th tuple element, optional, default 0) is an INTEGER step count.
+// World-Y rise per step = STEP_HEIGHT (pre-GRID_SCALE). With STEP_HEIGHT=1.5
+// and GRID_SCALE=0.75 -> 1.125 world units per step. Across one cell length
+// (CELL_RAW=9.99) one step delta = ~8.5 deg grade — drivable.
+export const STEP_HEIGHT = 1.5;
 
+const _dummy = new THREE.Object3D();
+const _axisY = new THREE.Vector3( 0, 1, 0 );
+const _axisX = new THREE.Vector3( 1, 0, 0 );
+const _yawQ = new THREE.Quaternion();
+const _pitchQ = new THREE.Quaternion();
+
+// Cell tuple format: [ gx, gz, type, orient, y? ]
+//   gx, gz   : integer grid coords
+//   type     : 'track-straight' | 'track-corner' | 'track-bump' | 'track-finish'
+//   orient   : Godot-orient index (0/10/16/22)
+//   y        : optional integer elevation step (default 0)
+//              Same (gx,gz) may appear multiple times at different y (bridges).
+// Test track:
+//   - West column climbs Y 0->3 (uphill), holds plateau (bridge-like over
+//     ground), descends 3->0 (downhill).
+//   - Corners + east column stay flat at Y=0.
 export const TRACK_CELLS = [
-	// Top edge
-	[ -3, -6, 'track-corner',   16 ], // NW
-	[ -2, -6, 'track-straight', 22 ],
-	[ -1, -6, 'track-straight', 22 ],
-	[  0, -6, 'track-corner',    0 ], // NE
-	// West column (long mountain-pass straight)
-	[ -3, -5, 'track-straight',  0 ],
-	[ -3, -4, 'track-straight',  0 ],
-	[ -3, -3, 'track-straight',  0 ],
-	[ -3, -2, 'track-straight',  0 ],
-	[ -3, -1, 'track-straight',  0 ],
-	[ -3,  0, 'track-straight',  0 ],
-	[ -3,  1, 'track-straight',  0 ],
-	[ -3,  2, 'track-straight',  0 ],
-	[ -3,  3, 'track-straight',  0 ],
-	[ -3,  4, 'track-straight',  0 ],
-	// East column with two S-chicanes that pull the road inward and back
-	[  0, -5, 'track-straight',  0 ],
-	// First chicane (gz -4 to -2): jog west, then back east
-	[  0, -4, 'track-corner',   22 ], // S -> W
-	[ -1, -4, 'track-corner',   16 ], // E -> S
-	[ -1, -3, 'track-straight',  0 ],
-	[ -1, -2, 'track-corner',   10 ], // S -> E
-	[  0, -2, 'track-corner',    0 ], // W -> S
-	[  0, -1, 'track-straight',  0 ],
-	[  0,  0, 'track-finish',    0 ],
-	[  0,  1, 'track-straight',  0 ],
-	// Second chicane (gz 2 to 4)
-	[  0,  2, 'track-corner',   22 ], // S -> W
-	[ -1,  2, 'track-corner',   16 ], // E -> S
-	[ -1,  3, 'track-straight',  0 ],
-	[ -1,  4, 'track-corner',   10 ], // S -> E
-	[  0,  4, 'track-corner',    0 ], // W -> S
-	// Bottom edge
-	[ -3,  5, 'track-corner',   10 ], // SW
-	[ -2,  5, 'track-straight', 16 ],
-	[ -1,  5, 'track-straight', 16 ],
-	[  0,  5, 'track-corner',   22 ], // SE
+	// Top edge — flat
+	[ -3, -6, 'track-corner',   16, 0 ], // NW
+	[ -2, -6, 'track-straight', 22, 0 ],
+	[ -1, -6, 'track-straight', 22, 0 ],
+	[  0, -6, 'track-corner',    0, 0 ], // NE
+	// West column — climb, plateau (bridge-like), descend
+	[ -3, -5, 'track-straight',  0, 0 ],
+	[ -3, -4, 'track-straight',  0, 1 ], // uphill
+	[ -3, -3, 'track-straight',  0, 2 ], // uphill
+	[ -3, -2, 'track-straight',  0, 3 ], // peak entry
+	[ -3, -1, 'track-straight',  0, 3 ], // plateau
+	[ -3,  0, 'track-straight',  0, 3 ], // plateau (bridge-like)
+	[ -3,  1, 'track-straight',  0, 2 ], // downhill
+	[ -3,  2, 'track-straight',  0, 1 ], // downhill
+	[ -3,  3, 'track-straight',  0, 0 ],
+	[ -3,  4, 'track-straight',  0, 0 ],
+	// East column with two S-chicanes — flat
+	[  0, -5, 'track-straight',  0, 0 ],
+	[  0, -4, 'track-corner',   22, 0 ],
+	[ -1, -4, 'track-corner',   16, 0 ],
+	[ -1, -3, 'track-straight',  0, 0 ],
+	[ -1, -2, 'track-corner',   10, 0 ],
+	[  0, -2, 'track-corner',    0, 0 ],
+	[  0, -1, 'track-straight',  0, 0 ],
+	[  0,  0, 'track-finish',    0, 0 ],
+	[  0,  1, 'track-straight',  0, 0 ],
+	[  0,  2, 'track-corner',   22, 0 ],
+	[ -1,  2, 'track-corner',   16, 0 ],
+	[ -1,  3, 'track-straight',  0, 0 ],
+	[ -1,  4, 'track-corner',   10, 0 ],
+	[  0,  4, 'track-corner',    0, 0 ],
+	// Bottom edge — flat
+	[ -3,  5, 'track-corner',   10, 0 ], // SW
+	[ -2,  5, 'track-straight', 16, 0 ],
+	[ -1,  5, 'track-straight', 16, 0 ],
+	[  0,  5, 'track-corner',   22, 0 ], // SE
 ];
+
+// Build a map: key = "gx,gz" -> array of cell Y values (handles bridges).
+export function buildElevationMap( cells ) {
+
+	const map = new Map();
+	for ( const cell of cells ) {
+
+		const gx = cell[ 0 ];
+		const gz = cell[ 1 ];
+		const y = cell[ 4 ] ?? 0;
+		const key = gx + ',' + gz;
+		const list = map.get( key );
+		if ( list ) list.push( y );
+		else map.set( key, [ y ] );
+
+	}
+	return map;
+
+}
+
+function pickNeighborY( elevMap, gx, gz, currentY ) {
+
+	const list = elevMap.get( gx + ',' + gz );
+	if ( ! list || list.length === 0 ) return null;
+	let best = list[ 0 ];
+	for ( const y of list ) {
+
+		if ( Math.abs( y - currentY ) < Math.abs( best - currentY ) ) best = y;
+
+	}
+	return best;
+
+}
+
+// Compute placement + rotation for one cell. Used by Track piece placement,
+// wall colliders, road colliders, bollards.
+//
+// Returns:
+//   pieceLocalY : Y in trackGroup-local space where piece center should sit.
+//                 (piece.position.y = pieceLocalY)
+//   yawRad      : yaw around world Y (orient mapping)
+//   pitch       : signed rotation around local X (after yaw). Negative = nose up.
+//   cellY       : raw integer Y of this cell
+//   yFwd        : Y of forward neighbor (= cellY for corners / no-neighbor)
+export function computeCellTransform( cell, elevMap ) {
+
+	const [ gx, gz, key, orient ] = cell;
+	const cellY = cell[ 4 ] ?? 0;
+	const yawDeg = ORIENT_DEG[ orient ] ?? 0;
+	const yawRad = yawDeg * Math.PI / 180;
+
+	// Corners + bumps stay flat — ramps live on straights only.
+	if ( key === 'track-corner' || key === 'track-bump' ) {
+
+		return {
+			pieceLocalY: 0.5 + cellY * STEP_HEIGHT,
+			yawRad,
+			pitch: 0,
+			cellY,
+			yFwd: cellY,
+		};
+
+	}
+
+	// Forward neighbor along orient direction. dx,dz rounded to {-1,0,+1}.
+	const dx = Math.round( Math.sin( yawRad ) );
+	const dz = Math.round( Math.cos( yawRad ) );
+	const yFwd = pickNeighborY( elevMap, gx + dx, gz + dz, cellY ) ?? cellY;
+
+	const pieceLocalY = 0.5 + ( ( cellY + yFwd ) / 2 ) * STEP_HEIGHT;
+	const pitch = - Math.atan2( ( yFwd - cellY ) * STEP_HEIGHT, CELL_RAW );
+
+	return { pieceLocalY, yawRad, pitch, cellY, yFwd };
+
+}
+
+// Build a THREE.Quaternion from yawRad + pitch. Yaw then pitch
+// (post-multiply) so pitch axis stays as world X after pre-yaw,
+// which keeps the road tilting nose-up along travel direction.
+export function makeCellQuaternion( yawRad, pitch, outQuat ) {
+
+	_yawQ.setFromAxisAngle( _axisY, yawRad );
+	_pitchQ.setFromAxisAngle( _axisX, pitch );
+	const q = outQuat || new THREE.Quaternion();
+	q.multiplyQuaternions( _yawQ, _pitchQ );
+	return q;
+
+}
 
 // Hand-placed decorations cleared — track was widened/lengthened and the
 // hand-placed positions overlapped new track cells. The auto-fill code
@@ -72,10 +179,11 @@ export function buildTrack( scene, models, customCells ) {
 	const decoGroup = new THREE.Group();
 
 	const cells = customCells || TRACK_CELLS;
+	const elevMap = buildElevationMap( cells );
 
-	for ( const [ gx, gz, key, orient ] of cells ) {
+	for ( const cell of cells ) {
 
-		const piece = placePiece( models, key, gx, gz, orient );
+		const piece = placePiece( models, cell, elevMap );
 		if ( piece ) trackPieceGroup.add( piece );
 
 	}
@@ -250,16 +358,18 @@ export function buildTrack( scene, models, customCells ) {
 
 }
 
-export function placePiece( models, key, gx, gz, orient ) {
+export function placePiece( models, cell, elevMap ) {
 
+	const [ gx, gz, key ] = cell;
 	const src = models[ key ];
 	if ( ! src ) return null;
 
 	const piece = src.clone();
-	piece.position.set( ( gx + 0.5 ) * CELL_RAW, 0.5, ( gz + 0.5 ) * CELL_RAW );
 
-	const deg = ORIENT_DEG[ orient ] ?? 0;
-	piece.rotation.y = THREE.MathUtils.degToRad( deg );
+	const { pieceLocalY, yawRad, pitch } = computeCellTransform( cell, elevMap );
+
+	piece.position.set( ( gx + 0.5 ) * CELL_RAW, pieceLocalY, ( gz + 0.5 ) * CELL_RAW );
+	makeCellQuaternion( yawRad, pitch, piece.quaternion );
 
 	return piece;
 
@@ -276,28 +386,55 @@ const GODOT_TO_ORIENT = { 0: 0, 16: 1, 10: 2, 22: 3 };
 
 export { TYPE_NAMES };
 
+// Codec layout:
+//   v0 (legacy, 3 bytes/cell): [gx+128, gz+128, (typeIdx<<2)|orientIdx]
+//   v1 (4 bytes/cell, with elevation): [gx+128, gz+128, (typeIdx<<2)|orientIdx, y+128]
+// Encoder always writes v1 prefixed with '1'. Decoder detects prefix —
+// legacy URLs without the prefix fall back to v0 (y defaults to 0).
 export function encodeCells( cells ) {
 
-	const bytes = new Uint8Array( cells.length * 3 );
+	const bytes = new Uint8Array( cells.length * 4 );
 
 	for ( let i = 0; i < cells.length; i ++ ) {
 
 		const [ gx, gz, name, godotOrient ] = cells[ i ];
+		const y = cells[ i ][ 4 ] ?? 0;
 		const ti = TYPE_INDEX[ name ] ?? 0;
 		const oi = GODOT_TO_ORIENT[ godotOrient ] ?? 0;
 
-		bytes[ i * 3 ] = gx + 128;
-		bytes[ i * 3 + 1 ] = gz + 128;
-		bytes[ i * 3 + 2 ] = ( ti << 2 ) | oi;
+		bytes[ i * 4 ] = gx + 128;
+		bytes[ i * 4 + 1 ] = gz + 128;
+		bytes[ i * 4 + 2 ] = ( ti << 2 ) | oi;
+		bytes[ i * 4 + 3 ] = ( y + 128 ) & 0xff;
 
 	}
 
-	return bytesToBase64url( bytes );
+	return '1' + bytesToBase64url( bytes );
 
 }
 
 export function decodeCells( str ) {
 
+	if ( str && str.charAt( 0 ) === '1' ) {
+
+		const bytes = base64urlToBytes( str.slice( 1 ) );
+		const cells = [];
+		for ( let i = 0; i + 3 < bytes.length; i += 4 ) {
+
+			const gx = bytes[ i ] - 128;
+			const gz = bytes[ i + 1 ] - 128;
+			const packed = bytes[ i + 2 ];
+			const y = bytes[ i + 3 ] - 128;
+			const ti = ( packed >> 2 ) & 0x03;
+			const oi = packed & 0x03;
+			cells.push( [ gx, gz, TYPE_NAMES[ ti ], ORIENT_TO_GODOT[ oi ], y ] );
+
+		}
+		return cells;
+
+	}
+
+	// Legacy v0 — no elevation byte.
 	const bytes = base64urlToBytes( str );
 	const cells = [];
 
@@ -309,7 +446,7 @@ export function decodeCells( str ) {
 		const ti = ( packed >> 2 ) & 0x03;
 		const oi = packed & 0x03;
 
-		cells.push( [ gx, gz, TYPE_NAMES[ ti ], ORIENT_TO_GODOT[ oi ] ] );
+		cells.push( [ gx, gz, TYPE_NAMES[ ti ], ORIENT_TO_GODOT[ oi ], 0 ] );
 
 	}
 
@@ -336,13 +473,16 @@ export function computeSpawnPosition( cells ) {
 
 	const gx = cell[ 0 ];
 	const gz = cell[ 1 ];
+	const cellY = cell[ 4 ] ?? 0;
 	const x = ( gx + 0.5 ) * CELL_RAW * GRID_SCALE;
 	const z = ( gz + 0.5 ) * CELL_RAW * GRID_SCALE;
+	// Lift spawn so vehicle drops onto the elevated road slab, not into it.
+	const y = 0.5 + cellY * STEP_HEIGHT * GRID_SCALE;
 
 	const orient = cell[ 3 ];
 	const angle = THREE.MathUtils.degToRad( ORIENT_DEG[ orient ] || 0 );
 
-	return { position: [ x, 0.5, z ], angle };
+	return { position: [ x, y, z ], angle };
 
 }
 
