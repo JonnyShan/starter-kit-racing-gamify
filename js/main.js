@@ -25,7 +25,7 @@ import { SpeedLines } from './SpeedLines.js';
 import { Countdown } from './Countdown.js';
 import { Hills } from './Hills.js';
 import { buildProceduralSakura } from './ProceduralSakura.js';
-import { buildProceduralRoad } from './ProceduralRoad.js';
+import { buildProceduralStraight, buildProceduralCorner } from './ProceduralRoad.js';
 import { FinishLine } from './FinishLine.js';
 import { Mountains } from './Mountains.js';
 import { GrassBlades } from './GrassBlades.js';
@@ -156,10 +156,12 @@ async function loadModels() {
 	// Replace Kenney road GLBs (which carry yellow centre lines + white
 	// edge stripes + red/white kerbs) with plain dark slabs. Track meets
 	// grass directly with no painted markings or raised borders.
-	models[ 'track-straight' ] = buildProceduralRoad();
-	models[ 'track-corner'   ] = buildProceduralRoad();
-	models[ 'track-finish'   ] = buildProceduralRoad();
-	models[ 'track-bump'     ] = buildProceduralRoad();
+	// Straight pieces use a narrow strip; corners use a quarter-arc mesh
+	// so turns curve naturally instead of looking like square pads.
+	models[ 'track-straight' ] = buildProceduralStraight();
+	models[ 'track-corner'   ] = buildProceduralCorner();
+	models[ 'track-finish'   ] = buildProceduralStraight();
+	models[ 'track-bump'     ] = buildProceduralStraight();
 
 }
 

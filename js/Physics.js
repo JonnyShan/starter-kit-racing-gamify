@@ -85,9 +85,7 @@ export function createSphereBody( world, spawnPos ) {
 		restitution: 0.0,
 		linearDamping: 0.1,
 		angularDamping: 4.0,
-		// Lower gravity gives the car satisfying hang-time when launching
-		// off a crest. 1.5 -> 1.15 keeps it weighty but lets jumps breathe.
-		gravityFactor: 1.15,
+		gravityFactor: 1.5,
 		motionQuality: MotionQuality.LINEAR_CAST,
 	} );
 

@@ -452,19 +452,6 @@ export class Vehicle {
 
 		}
 
-		// Crest detection: if we were climbing last frame (prev pitch
-		// strongly negative = nose up) and we're now flat or descending,
-		// pop the ball upward so the car catches air over the hill crest.
-		const wasClimbing = this.prevRoadPitch < - 0.06;
-		const flatOrDownNow = target > - 0.02;
-		if ( wasClimbing && flatOrDownNow && this.linearSpeed > 0.6 && this.rigidBody ) {
-
-			const v = this.rigidBody.motionProperties.linearVelocity;
-			const popVy = Math.max( v[ 1 ], 3.5 + this.linearSpeed * 2.0 );
-			rigidBody.setLinearVelocity( this.physicsWorld, this.rigidBody, [ v[ 0 ], popVy, v[ 2 ] ] );
-
-		}
-
 		this.prevRoadPitch = this.roadPitch;
 		this.roadPitch = THREE.MathUtils.lerp( this.roadPitch, target, dt * 6 );
 

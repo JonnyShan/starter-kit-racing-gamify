@@ -120,18 +120,62 @@ export class GameAudio {
 		window.addEventListener( 'click', unlock );
 		window.addEventListener( 'touchstart', unlock );
 
-		// Mute toggle — press 'M'. Persists across sessions.
+		// Mute toggle — keyboard M and visible button in top-right corner.
+		// State persists across sessions in localStorage.
 		this.muted = localStorage.getItem( 'racing.muted' ) === '1';
 		if ( this.muted ) this.listener.setMasterVolume( 0 );
 
+		this._buildMuteButton();
+
 		window.addEventListener( 'keydown', ( e ) => {
 
-			if ( e.code !== 'KeyM' ) return;
-			this.muted = ! this.muted;
-			this.listener.setMasterVolume( this.muted ? 0 : 1 );
-			localStorage.setItem( 'racing.muted', this.muted ? '1' : '0' );
+			if ( e.code === 'KeyM' ) this.toggleMute();
 
 		} );
+
+	}
+
+	toggleMute() {
+
+		this.muted = ! this.muted;
+		this.listener.setMasterVolume( this.muted ? 0 : 1 );
+		localStorage.setItem( 'racing.muted', this.muted ? '1' : '0' );
+		if ( this.muteBtn ) this.muteBtn.textContent = this.muted ? 'SOUND OFF' : 'SOUND ON';
+		return this.muted;
+
+	}
+
+	_buildMuteButton() {
+
+		const btn = document.createElement( 'button' );
+		btn.id = 'mute-btn';
+		btn.textContent = this.muted ? 'SOUND OFF' : 'SOUND ON';
+		btn.style.cssText = `
+			position: fixed;
+			top: 12px;
+			right: 12px;
+			z-index: 25;
+			padding: 8px 14px;
+			border: none;
+			border-radius: 999px;
+			background: rgba(0, 0, 0, 0.55);
+			color: #fff;
+			font: 600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+			letter-spacing: 0.1em;
+			cursor: pointer;
+			backdrop-filter: blur(6px);
+			-webkit-backdrop-filter: blur(6px);
+			user-select: none;
+		`;
+		btn.addEventListener( 'click', ( e ) => {
+
+			e.preventDefault();
+			this.toggleMute();
+			btn.blur();
+
+		} );
+		document.body.appendChild( btn );
+		this.muteBtn = btn;
 
 	}
 
