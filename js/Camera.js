@@ -49,13 +49,19 @@ export class Camera {
 		const speed = vehicle.modelVelocity ? vehicle.modelVelocity.length() : 0;
 		const speedFactor = Math.min( speed / SPEED_REF, 1 );
 
+		// Camera tilts subtly with the road slope. Positive vehicle pitch
+		// (nose down / descending) drops the look point; negative pitch
+		// (climbing) lifts it. Damped by 0.6 so the move is gentle.
+		const pitch = vehicle.roadPitch || 0;
+		const lookPitchOffset = pitch * 0.6 * TRAIL_DISTANCE;
+
 		_desiredPos.copy( carPos )
 			.addScaledVector( _forward, - TRAIL_DISTANCE );
-		_desiredPos.y += TRAIL_HEIGHT;
+		_desiredPos.y += TRAIL_HEIGHT + pitch * 0.4 * TRAIL_DISTANCE;
 
 		_desiredLook.copy( carPos )
 			.addScaledVector( _forward, LOOK_AHEAD + speedFactor * LOOK_SPEED_BONUS );
-		_desiredLook.y += LOOK_HEIGHT;
+		_desiredLook.y += LOOK_HEIGHT - lookPitchOffset;
 
 		if ( ! this.initialized ) {
 

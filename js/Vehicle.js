@@ -81,8 +81,14 @@ export class Vehicle {
 		// Road-surface pitch tracking — applied to bodyNode so the visible
 		// car tilts to match the slope it's sitting on.
 		this.roadPitch = 0;
+		this.prevRoadPitch = 0;
 		this.cells = null;
 		this.elevMap = null;
+
+		// Drift boost — accumulate while drifting hard, release as a
+		// short forward burst when the player exits the slide.
+		this.driftChargeTime = 0;
+		this.boostTimeLeft = 0;
 
 	}
 
@@ -218,7 +224,11 @@ export class Vehicle {
 			const rearGrip = this.handbrake ? REAR_GRIP_HANDBRAKE : REAR_GRIP_NORMAL;
 			const speedDenom = Math.abs( this.linearSpeed ) + 0.1;
 			const slipMag = Math.min( Math.abs( this.lateralSpeed ) / speedDenom, 1 );
-			const frontGrip = THREE.MathUtils.lerp( FRONT_GRIP_GRIP, FRONT_GRIP_SLIDE, slipMag );
+			// Slope-aware grip: downhill (positive roadPitch = nose down) cuts
+			// front grip up to 60% on the steepest descents, giving a looser
+			// "fast descent" feel that rewards earlier braking.
+			const slopeGripFactor = Math.max( 0.4, 1 - Math.max( 0, this.roadPitch ) * 1.2 );
+			const frontGrip = THREE.MathUtils.lerp( FRONT_GRIP_GRIP, FRONT_GRIP_SLIDE, slipMag ) * slopeGripFactor;
 
 			if ( this.handbrake && ! this.prevHandbrake && Math.abs( this.linearSpeed ) > 0.2 ) {
 
@@ -297,6 +307,38 @@ export class Vehicle {
 
 			const vel = this.rigidBody.motionProperties.linearVelocity;
 			this.sphereVel.set( vel[ 0 ], vel[ 1 ], vel[ 2 ] );
+
+		}
+
+		// Drift-boost charge: build while handbraking with real sideways
+		// slip. Release into a forward burst when the player exits.
+		const driftHard = this.handbrake && Math.abs( this.lateralSpeed ) > 0.15;
+		if ( driftHard ) {
+
+			this.driftChargeTime += dt;
+
+		} else if ( this.prevHandbrake && this.driftChargeTime > 0.8 ) {
+
+			this.boostTimeLeft = 1.4;
+			this.driftChargeTime = 0;
+
+		} else if ( ! this.handbrake ) {
+
+			this.driftChargeTime = Math.max( 0, this.driftChargeTime - dt * 0.5 );
+
+		}
+
+		if ( this.boostTimeLeft > 0 ) {
+
+			this.boostTimeLeft -= dt;
+			// Push linearSpeed past MAX_SPEED briefly — natural damping
+			// pulls it back once the boost timer expires.
+			const target = MAX_SPEED * 1.3;
+			if ( this.linearSpeed < target ) {
+
+				this.linearSpeed = THREE.MathUtils.lerp( this.linearSpeed, target, dt * 4 );
+
+			}
 
 		}
 
@@ -410,6 +452,20 @@ export class Vehicle {
 
 		}
 
+		// Crest detection: if we were climbing last frame (prev pitch
+		// strongly negative = nose up) and we're now flat or descending,
+		// pop the ball upward so the car catches air over the hill crest.
+		const wasClimbing = this.prevRoadPitch < - 0.06;
+		const flatOrDownNow = target > - 0.02;
+		if ( wasClimbing && flatOrDownNow && this.linearSpeed > 0.6 && this.rigidBody ) {
+
+			const v = this.rigidBody.motionProperties.linearVelocity;
+			const popVy = Math.max( v[ 1 ], 3.5 + this.linearSpeed * 2.0 );
+			rigidBody.setLinearVelocity( this.physicsWorld, this.rigidBody, [ v[ 0 ], popVy, v[ 2 ] ] );
+
+		}
+
+		this.prevRoadPitch = this.roadPitch;
 		this.roadPitch = THREE.MathUtils.lerp( this.roadPitch, target, dt * 6 );
 
 	}
