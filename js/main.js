@@ -24,7 +24,6 @@ import { Headlights } from './Headlights.js';
 import { SpeedLines } from './SpeedLines.js';
 import { Countdown } from './Countdown.js';
 import { Hills } from './Hills.js';
-import { buildProceduralCar } from './ProceduralCar.js';
 import { buildProceduralSakura } from './ProceduralSakura.js';
 import { GrassBlades } from './GrassBlades.js';
 
@@ -140,13 +139,16 @@ async function loadModels() {
 
 	await Promise.all( promises );
 
-	// Replace Kenney truck with procedural AE86-style car
-	models[ 'vehicle-truck-yellow' ] = buildProceduralCar();
-
 	// Replace pine-tree forest GLB with procedural ball-cluster sakura tree.
 	// Each tree is a brown trunk with overlapping pink icosahedron blossoms,
 	// which look like cherry blossoms instead of pink-shifted conifers.
 	models[ 'decoration-forest' ] = buildProceduralSakura();
+
+	// Kenney's 'decoration-empty' actually ships with pine trees baked in,
+	// which crowds the scene with greenish conifers around the sakura.
+	// Swap for an empty Group so non-forest cells stay truly bare and the
+	// procedural grass + sparse sakura read clearly.
+	models[ 'decoration-empty' ] = new THREE.Group();
 
 }
 

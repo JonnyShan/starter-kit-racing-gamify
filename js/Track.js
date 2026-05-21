@@ -24,47 +24,145 @@ const _pitchQ = new THREE.Quaternion();
 //   orient   : Godot-orient index (0/10/16/22)
 //   y        : optional integer elevation step (default 0)
 //              Same (gx,gz) may appear multiple times at different y (bridges).
-// Test track:
-//   - West column climbs Y 0->3 (uphill), holds plateau (bridge-like over
-//     ground), descends 3->0 (downhill).
-//   - Corners + east column stay flat at Y=0.
+//
+// Linear point-to-point track — long winding mountain pass running south
+// (gz +) with periodic east/west jogs and rolling elevation. ~120 cells.
+// No 'track-finish' cell -> lap timer disabled; first cell = spawn.
+//
+// Corner orient quick reference (set of connected edges):
+//   orient 0  : {W, S}    orient 10 : {N, E}
+//   orient 16 : {E, S}    orient 22 : {N, W}
+// Direction transitions used below:
+//   S->W = orient 22   E->S = orient 0
+//   W->S = orient 16   S->E = orient 10
 export const TRACK_CELLS = [
-	// Top edge — flat
-	[ -3, -6, 'track-corner',   16, 0 ], // NW
-	[ -2, -6, 'track-straight', 22, 0 ],
-	[ -1, -6, 'track-straight', 22, 0 ],
-	[  0, -6, 'track-corner',    0, 0 ], // NE
-	// West column — climb, plateau (bridge-like), descend
-	[ -3, -5, 'track-straight',  0, 0 ],
-	[ -3, -4, 'track-straight',  0, 1 ], // uphill
-	[ -3, -3, 'track-straight',  0, 2 ], // uphill
-	[ -3, -2, 'track-straight',  0, 3 ], // peak entry
-	[ -3, -1, 'track-straight',  0, 3 ], // plateau
-	[ -3,  0, 'track-straight',  0, 3 ], // plateau (bridge-like)
-	[ -3,  1, 'track-straight',  0, 2 ], // downhill
-	[ -3,  2, 'track-straight',  0, 1 ], // downhill
-	[ -3,  3, 'track-straight',  0, 0 ],
-	[ -3,  4, 'track-straight',  0, 0 ],
-	// East column with two S-chicanes — flat
-	[  0, -5, 'track-straight',  0, 0 ],
-	[  0, -4, 'track-corner',   22, 0 ],
-	[ -1, -4, 'track-corner',   16, 0 ],
-	[ -1, -3, 'track-straight',  0, 0 ],
-	[ -1, -2, 'track-corner',   10, 0 ],
-	[  0, -2, 'track-corner',    0, 0 ],
-	[  0, -1, 'track-straight',  0, 0 ],
-	[  0,  0, 'track-finish',    0, 0 ],
+	// Section 1: south start, gentle climb 0 -> 3
+	[  0,  0, 'track-straight',  0, 0 ],
 	[  0,  1, 'track-straight',  0, 0 ],
-	[  0,  2, 'track-corner',   22, 0 ],
-	[ -1,  2, 'track-corner',   16, 0 ],
-	[ -1,  3, 'track-straight',  0, 0 ],
-	[ -1,  4, 'track-corner',   10, 0 ],
-	[  0,  4, 'track-corner',    0, 0 ],
-	// Bottom edge — flat
-	[ -3,  5, 'track-corner',   10, 0 ], // SW
-	[ -2,  5, 'track-straight', 16, 0 ],
-	[ -1,  5, 'track-straight', 16, 0 ],
-	[  0,  5, 'track-corner',   22, 0 ], // SE
+	[  0,  2, 'track-straight',  0, 0 ],
+	[  0,  3, 'track-straight',  0, 1 ],
+	[  0,  4, 'track-straight',  0, 1 ],
+	[  0,  5, 'track-straight',  0, 2 ],
+	[  0,  6, 'track-straight',  0, 2 ],
+	[  0,  7, 'track-straight',  0, 3 ],
+	[  0,  8, 'track-straight',  0, 3 ],
+	[  0,  9, 'track-straight',  0, 3 ],
+	// Section 2: jog west at altitude (plateau)
+	[  0, 10, 'track-corner',   22, 3 ], // S->W
+	[ -1, 10, 'track-straight', 22, 3 ],
+	[ -2, 10, 'track-straight', 22, 3 ],
+	[ -3, 10, 'track-corner',   16, 3 ], // W->S
+	// Section 3: long descent 3 -> 0
+	[ -3, 11, 'track-straight',  0, 3 ],
+	[ -3, 12, 'track-straight',  0, 2 ],
+	[ -3, 13, 'track-straight',  0, 2 ],
+	[ -3, 14, 'track-straight',  0, 1 ],
+	[ -3, 15, 'track-straight',  0, 1 ],
+	[ -3, 16, 'track-straight',  0, 0 ],
+	[ -3, 17, 'track-straight',  0, 0 ],
+	[ -3, 18, 'track-straight',  0, 0 ],
+	[ -3, 19, 'track-straight',  0, 0 ],
+	[ -3, 20, 'track-straight',  0, 0 ],
+	// Section 4: jog east in valley
+	[ -3, 21, 'track-corner',   10, 0 ], // S->E
+	[ -2, 21, 'track-straight', 22, 0 ],
+	[ -1, 21, 'track-straight', 22, 0 ],
+	[  0, 21, 'track-corner',    0, 0 ], // E->S
+	// Section 5: long climb 0 -> 4 (highest peak)
+	[  0, 22, 'track-straight',  0, 0 ],
+	[  0, 23, 'track-straight',  0, 1 ],
+	[  0, 24, 'track-straight',  0, 1 ],
+	[  0, 25, 'track-straight',  0, 2 ],
+	[  0, 26, 'track-straight',  0, 2 ],
+	[  0, 27, 'track-straight',  0, 3 ],
+	[  0, 28, 'track-straight',  0, 3 ],
+	[  0, 29, 'track-straight',  0, 4 ],
+	[  0, 30, 'track-straight',  0, 4 ],
+	[  0, 31, 'track-straight',  0, 4 ],
+	// Section 6: jog west on high plateau
+	[  0, 32, 'track-corner',   22, 4 ],
+	[ -1, 32, 'track-straight', 22, 4 ],
+	[ -2, 32, 'track-straight', 22, 4 ],
+	[ -3, 32, 'track-corner',   16, 4 ],
+	// Section 7: descent 4 -> 0
+	[ -3, 33, 'track-straight',  0, 4 ],
+	[ -3, 34, 'track-straight',  0, 3 ],
+	[ -3, 35, 'track-straight',  0, 3 ],
+	[ -3, 36, 'track-straight',  0, 2 ],
+	[ -3, 37, 'track-straight',  0, 2 ],
+	[ -3, 38, 'track-straight',  0, 1 ],
+	[ -3, 39, 'track-straight',  0, 1 ],
+	[ -3, 40, 'track-straight',  0, 0 ],
+	[ -3, 41, 'track-straight',  0, 0 ],
+	[ -3, 42, 'track-straight',  0, 0 ],
+	// Section 8: jog east at base
+	[ -3, 43, 'track-corner',   10, 0 ],
+	[ -2, 43, 'track-straight', 22, 0 ],
+	[ -1, 43, 'track-straight', 22, 0 ],
+	[  0, 43, 'track-corner',    0, 0 ],
+	// Section 9: rolling hills (down up down)
+	[  0, 44, 'track-straight',  0, 0 ],
+	[  0, 45, 'track-straight',  0, 1 ],
+	[  0, 46, 'track-straight',  0, 1 ],
+	[  0, 47, 'track-straight',  0, 2 ],
+	[  0, 48, 'track-straight',  0, 2 ],
+	[  0, 49, 'track-straight',  0, 3 ],
+	[  0, 50, 'track-straight',  0, 3 ],
+	[  0, 51, 'track-straight',  0, 2 ],
+	[  0, 52, 'track-straight',  0, 2 ],
+	[  0, 53, 'track-straight',  0, 1 ],
+	// Section 10: jog west, rolling
+	[  0, 54, 'track-corner',   22, 1 ],
+	[ -1, 54, 'track-straight', 22, 1 ],
+	[ -2, 54, 'track-straight', 22, 1 ],
+	[ -3, 54, 'track-corner',   16, 1 ],
+	// Section 11: descend to lowest section
+	[ -3, 55, 'track-straight',  0, 1 ],
+	[ -3, 56, 'track-straight',  0, 0 ],
+	[ -3, 57, 'track-straight',  0, 0 ],
+	[ -3, 58, 'track-straight',  0, 0 ],
+	[ -3, 59, 'track-straight',  0, 0 ],
+	[ -3, 60, 'track-straight',  0, 0 ],
+	[ -3, 61, 'track-straight',  0, 0 ],
+	[ -3, 62, 'track-straight',  0, 0 ],
+	[ -3, 63, 'track-straight',  0, 0 ],
+	[ -3, 64, 'track-straight',  0, 0 ],
+	// Section 12: jog east
+	[ -3, 65, 'track-corner',   10, 0 ],
+	[ -2, 65, 'track-straight', 22, 0 ],
+	[ -1, 65, 'track-straight', 22, 0 ],
+	[  0, 65, 'track-corner',    0, 0 ],
+	// Section 13: final climb 0 -> 3
+	[  0, 66, 'track-straight',  0, 0 ],
+	[  0, 67, 'track-straight',  0, 1 ],
+	[  0, 68, 'track-straight',  0, 1 ],
+	[  0, 69, 'track-straight',  0, 2 ],
+	[  0, 70, 'track-straight',  0, 2 ],
+	[  0, 71, 'track-straight',  0, 3 ],
+	[  0, 72, 'track-straight',  0, 3 ],
+	[  0, 73, 'track-straight',  0, 3 ],
+	[  0, 74, 'track-straight',  0, 3 ],
+	[  0, 75, 'track-straight',  0, 3 ],
+	// Section 14: jog west on viewpoint plateau
+	[  0, 76, 'track-corner',   22, 3 ],
+	[ -1, 76, 'track-straight', 22, 3 ],
+	[ -2, 76, 'track-straight', 22, 3 ],
+	[ -3, 76, 'track-corner',   16, 3 ],
+	// Section 15: final long descent + flat finish straight
+	[ -3, 77, 'track-straight',  0, 3 ],
+	[ -3, 78, 'track-straight',  0, 2 ],
+	[ -3, 79, 'track-straight',  0, 2 ],
+	[ -3, 80, 'track-straight',  0, 1 ],
+	[ -3, 81, 'track-straight',  0, 1 ],
+	[ -3, 82, 'track-straight',  0, 0 ],
+	[ -3, 83, 'track-straight',  0, 0 ],
+	[ -3, 84, 'track-straight',  0, 0 ],
+	[ -3, 85, 'track-straight',  0, 0 ],
+	[ -3, 86, 'track-straight',  0, 0 ],
+	[ -3, 87, 'track-straight',  0, 0 ],
+	[ -3, 88, 'track-straight',  0, 0 ],
+	[ -3, 89, 'track-straight',  0, 0 ],
+	[ -3, 90, 'track-straight',  0, 0 ],
 ];
 
 // Build a map: key = "gx,gz" -> array of cell Y values (handles bridges).
